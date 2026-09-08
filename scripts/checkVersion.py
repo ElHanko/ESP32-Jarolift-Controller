@@ -10,18 +10,16 @@ logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 def get_version_from_changenew(file_path):
     with open(file_path, 'r') as file:
         for line in file:
-            # Suche nach der Version in der Form "# v4.x.x"
-            match = re.match(r'#\s*v([\d]+)\.([\d]+)\.([\d]+)', line)
+            match = re.match(r'#\s*(\d{4}\.\d+\.\d+)', line)
             if match:
-                return f'v{match.group(1)}.{match.group(2)}.{match.group(3)}'
+                return match.group(1)
     return None
 
 # Version aus include/config.h extrahieren
 def get_version_from_config(file_path):
     with open(file_path, 'r') as file:
         for line in file:
-            # Suche nach der Definition in der Form "#define VERSION "v4.x.x""
-            match = re.match(r'#define\s+VERSION\s+"(v[\d]+\.[\d]+\.[\d]+)"', line)
+            match = re.match(r'#define\s+VERSION\s+"(\d{4}\.\d+\.\d+)"', line)
             if match:
                 return match.group(1)
     return None
