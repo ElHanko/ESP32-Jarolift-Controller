@@ -1,618 +1,928 @@
 <div align="center">
-<img style="width: 100px;" src="./Doc/ESP32_Jarolift_Controller_Logo.svg">
+  <img style="width: 100px;" src="./Doc/ESP32_Jarolift_Controller_Logo.svg">
 
-<h3 style="text-align: center;">ESP32-Jarolift-Controller</h3>
+  <h2>ESP32-Jarolift-Controller</h2>
+
+  ESP32 + CC1101 controller for Jarolift TDEF 433 MHz roller shutters
 </div>
 
------
+---
 
-**[🇩🇪 Deutsche Version der Beschreibung](README_DE.md)**
+**[🇩🇪 Deutsche Dokumentation](README_DE.md)**
 
------
+---
 
 <div align="center">
 
-[![Current Release](https://img.shields.io/github/release/dewenni/ESP32-Jarolift-Controller.svg)](https://github.com/dewenni/ESP32-Jarolift-Controller/releases/latest)
-![GitHub Release Date](https://img.shields.io/github/release-date/dewenni/ESP32-Jarolift-Controller)
-![GitHub last commit](https://img.shields.io/github/last-commit/dewenni/ESP32-Jarolift-Controller)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dewenni/ESP32-Jarolift-Controller/total?label=downloads%20total&color=%23f0cc59)
-![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/dewenni/ESP32-Jarolift-Controller/latest/total?label=downloads%20latest%20Release&color=%23f0cc59)
-
-![GitHub watchers](https://img.shields.io/github/watchers/dewenni/ESP32-Jarolift-Controller?style=social)
-[![GitHub stars](https://img.shields.io/github/stars/dewenni/ESP32-Jarolift-Controller.svg?style=social&label=Star)](https://github.com/dewenni/ESP32-Jarolift-Controller/stargazers/)
+[![Version](https://img.shields.io/github/v/tag/ElHanko/ESP32-Jarolift-Controller?label=version)](https://github.com/ElHanko/ESP32-Jarolift-Controller/tags)
+![GitHub last commit](https://img.shields.io/github/last-commit/ElHanko/ESP32-Jarolift-Controller)
+[![License](https://img.shields.io/github/license/ElHanko/ESP32-Jarolift-Controller)](LICENSE)
 
 </div>
 
------
+---
 
-<div align="center">
-If you like this project, feel free to push the <b>[Star ⭐️]</b> button and click <b>[Watch 👁]</b> to stay updated.
-<br><br>
-And if you'd like to support my work, you can also<p>
+> [!NOTE]
+> This repository is a maintained fork of
+> [dewenni/ESP32-Jarolift-Controller](https://github.com/dewenni/ESP32-Jarolift-Controller).
+>
+> The project keeps the original Jarolift controller functionality while
+> focusing on a reproducible build, a reduced attack surface and the hardware
+> configuration actually used and tested by this fork.
 
-[![Sponsor](https://img.shields.io/badge/Sponsor%20me%20on-GitHub-%23EA4AAA.svg?style=for-the-badge&logo=github)](https://github.com/sponsors/dewenni)
+Current version: **2026.1.0**
 
-</div>
+Version scheme:
 
------
+```text
+year.major.bugfix
+```
 
-# ESP32-Jarolift-Controller
+Examples:
 
-Controlling Jarolift(TM) TDEF 433MHz radio shutters via **ESP32** and **CC1101** Transceiver Module in asynchronous mode.
+```text
+2026.1.0
+2026.1.1
+2026.2.0
+2027.1.0
+```
 
-## Features
+# Overview
 
-- **Web-based User Interface (WebUI):**  
-A modern, mobile-friendly interface for easy configuration and control.
+ESP32-Jarolift-Controller controls Jarolift TDEF-compatible 433 MHz roller
+shutters using an ESP32 and a CC1101 transceiver.
 
-- **MQTT Support:**  
-Communication and control of devices are handled via MQTT, a lightweight and reliable messaging protocol.
+The ESP32 acts as an additional Jarolift radio transmitter. It maintains its
+own sender serial number and KeeLoq rolling counter and can control shutters
+through:
 
-- **HomeAssistant Integration:**  
-Automatic device discovery in HomeAssistant through MQTT Auto Discovery for seamless integration.
+- WebUI
+- MQTT
+- Home Assistant via MQTT Discovery
+- timers
+- predefined groups
+- direct bitmask groups
 
-- **Support for up to 16 Roller Shutters:**  
-Control up to 16 roller shutters with ease, all managed through the WebUI and MQTT.
+Signals from existing Jarolift remote controls can also be received and
+reported through MQTT.
 
-- **Support for up to 6 Roller Shutter Groups:**  
-define shutter groups to control several shutters at once
+# Features
 
-- **Timer function**  
-stand alone timer function with fixed time, sunrise or sunset as trigger.
+- Web-based configuration and control
+- MQTT control and status messages
+- Home Assistant MQTT Discovery
+- up to 16 shutter channels
+- up to 6 predefined groups
+- arbitrary groups through a 16-bit bitmask
+- timer control
+- sunrise and sunset triggers
+- reception of existing Jarolift remote controls
+- local firmware update through the WebUI
+- configuration import/export
+- persistent KeeLoq device counter
+- WiFi support
+- optional W5500 Ethernet support
 
-### WebUI-Demo
+# Differences from upstream
 
-For a first impression of the functions and the WebUI, a limited demo is also available.  
-This can be accessed via the following link: [WebUI-DEMO](https://dewenni.github.io/ESP32-Jarolift-Controller/)
+This fork currently contains several changes compared with the original
+project:
 
-Experimental version.
-Use at your own risk. For private/educational use only. (Keeloq algorithm licensed only to TI Microcontrollers)
-This project is not affiliated in any way with the vendor of the Jarolift components.
-Jarolift is a Trademark of Schöneberger Rolladenfabrik GmbH & Co. KG
+- reproducible Docker-based build workflow
+- Docker-based flashing without a host installation of PlatformIO or esptool
+- selected project dependencies vendored into the repository
+- local build secrets kept outside Git
+- individual configuration encryption key instead of a shared hard-coded key
+- WPA2-protected Setup Mode access point
+- mandatory WebUI authentication during normal operation
+- removal of ArduinoOTA
+- removal of GitHub-based OTA updates
+- removal of the active Telnet interface
+- local authenticated WebUI firmware updates retained
+- protection of persistent state such as the KeeLoq device counter
+- corrected CC1101 transmit-power initialization
+- validation of the Jarolift controller sender serial number
+- protection against transmitting with an invalid controller sender serial
 
-This version is for an ESP32 and is based on ideas and code from [madmartin/Jarolift_MQTT](https://github.com/madmartin/Jarolift_MQTT).
+# Project status
 
-### Project Homepage, Forum and Author
+The tested build target of this fork is currently:
 
-The original control code was written from Steffen Hille in Nov, 2017
+**Classic ESP32 with 4 MB flash**
 
-The project home is here: [Project Home](http://www.bastelbudenbuben.de/2017/04/25/protokollanalyse-von-jarolift-tdef-motoren/)
+The development and hardware validation is currently done with an
+ESP32-WROOM-32 based DevKit.
 
------
-
-# Table of Contents
-
-- [Hardware](#hardware)
-  - [ESP32](#esp32)
-  - [CC1101 433Mhz](#cc1101-433mhz)
-  - [Optional: Ethernet Module W5500](#optional-ethernet-module-w5500)
-- [Getting started](#getting-started)
-  - [Platform-IO](#platform-io)
-  - [ESP-Flash-Tool](#esp-flash-tool)
-  - [OTA-Updates](#ota-updates)
-  - [Setup-Mode](#setup-mode)
-  - [Configuration](#configuration)
-  - [Filemanager](#filemanager)
-  - [Teach-in of roller shutters](#teach-in-of-roller-shutters)
-  - [Migration](#migration)
-- [WebUI](#webui)
-  - [Channels](#channels)
-  - [Groups](#groups)
-  - [Timer](#timer)
-- [MQTT](#mqtt)
-  - [Commands](#commands)
-  - [Status](#status)
-  - [Home Assistant](#home-assistant)
-- [Optional Communication](#optional-communication)
-  - [WebUI-Logger](#webui-logger)
-  - [Telnet](#telnet)
-
------
+The source tree still contains PlatformIO environments for other ESP32
+variants inherited from upstream, but they are currently not part of the
+tested build and release workflow of this fork.
 
 # Hardware
 
-you can find working setups from users of this project here: [working setups](https://github.com/dewenni/ESP32-Jarolift-Controller/discussions/34)
-
 ## ESP32
 
-The firmware is currently only available for the following chips:
+Recommended:
 
-**Standard ESP32 (Xtensa® 32-bit LX6, 4MB Flash)**
+- classic ESP32
+- ESP32-WROOM-32
+- 4 MB flash
 
-- `ESP32-WROOM-32 series` (e.g. WROOM, WROOM-32D, WROOM-32U)
-- `ESP32-WROVER series` (e.g. WROVER, WROVER-B, WROVER-IE)
-- `ESP32-MINI series`
-- `ESP32-S2 series`
-- `ESP32-S3 series`
-- `ESP32-C3 series`
+## CC1101 433 MHz
 
-**Not compatible:**
+Tested hardware:
 
-- `ESP32-H series`
-- `YB-ESP32-S3-ETH`
-- `WT32-ETH01`
+- EBYTE E07-M1101D-SMA V2.0
 
-## CC1101 433Mhz
-
-**compatible and tested products:**
-
-- `EBYTE E07-M1101D-SMA V2.0`
-- `CC1101 433MHZ Green`
-
-
-a standard SPI GPIO configuration is:
-
-| CC1101-Signal| ESP-GPIO|
-|--------------|---------|
-| VCC          | --      |
-| GND          | --      |
-| GD0          | 21      |
-| GD2          | 22      |
-| SCK/CLK      | 18      |
-| MOSI         | 23      |
-| MISO         | 19      |
-| CS(N)        | 5       |
-
-<img style="width: 500px;" src="./Doc/ESP32_CC1101_Steckplatine.png">
-
-<img style="width: 500px;" src="./Doc/ESP32_CC1101_Schaltplan.png"> 
-
-<img style="width: 500px;" src="./Doc/hw_1.png">
-
-example with ESP32-Mini and CC1101
-
-<img style="width: 500px;" src="./Doc/hw_2.png">
-
-example for direct replacement with ESP32-Mini and the custom board from M. Maywald
-
-## Optional: Ethernet Module W5500
-
-It is also possible to connect a W5500 Ethernet module to the Board or a generic ESP32.  
-
-**compatible and tested products:**
-
-- `W5500` HanRun (HR911105A)
-- `W5500 Lite` HanRun (HR961160C)
-
+Other compatible 433 MHz CC1101 modules may work as well.
 
 > [!IMPORTANT]
-> The connection cable should be as short as possible (approx 10cm)
+> The CC1101 is a **3.3 V device**.
+>
+> Do not power the radio module with 5 V.
 
-Example for generic ESP32-Mini (Standard SPI port is used by CC1101)
+Attach a suitable 433 MHz antenna before transmitting.
 
-| Signal| GPIO |
-|-------|------|
-| CLK   | 25   |
-| MOSI  | 26   |
-| MISO  | 27   |
-| CS    | 32   |
-| INT   | 33   |
-| RST   | 17   |
+## Wiring
 
------
+Default wiring used by this project:
+
+| CC1101 | ESP32 |
+|---|---:|
+| VCC | 3.3 V |
+| GND | GND |
+| GDO0 | GPIO 21 |
+| GDO2 | GPIO 22 |
+| SCK | GPIO 18 |
+| MOSI | GPIO 23 |
+| MISO | GPIO 19 |
+| CSN | GPIO 5 |
+
+The GPIO assignment can later be changed in the WebUI.
+
+Existing upstream hardware documentation and images can be found in the
+[`Doc`](Doc/) directory.
+
+## Optional W5500 Ethernet
+
+Support for a W5500 Ethernet controller is retained from upstream.
+
+The CC1101 uses the primary SPI interface, therefore the W5500 uses a
+separate SPI interface.
+
+Typical upstream configuration:
+
+| Signal | ESP32 |
+|---|---:|
+| CLK | GPIO 25 |
+| MOSI | GPIO 26 |
+| MISO | GPIO 27 |
+| CS | GPIO 32 |
+| INT | GPIO 33 |
+| RST | GPIO 17 |
+
+Ethernet is not started while the controller is in Setup Mode.
 
 # Getting started
 
-## Platform-IO
+## Requirements
 
-The software is created with [Visual Studio Code](https://code.visualstudio.com) and the [pioarduino-Plugin](https://github.com/pioarduino/pioarduino-vscode-ide).  
-After installing the software you can clone the project from GitHub or you can download it as zip and open it in PlatformIO.
-Then adapt the `upload_port` and corresponding settings in `platformio.ini` to your USB-to-serial Adapter and upload the code to the ESP.
+The supported build and flash workflow requires:
 
-> [!NOTE]
-> Python must also be installed in order to fully compile the project. The scripts folder contains, for instance, scripts for creating the web pages that are called when the project is compiled.
+- Git
+- Docker
+- USB access to the ESP32 when flashing
 
-## ESP-Flash-Tool
+PlatformIO, Python packages and esptool do not have to be installed on the
+host system.
 
-In the releases, you can find also the binary of the Software. If you don´t want to use PlatformIO, you can also use the `esp32_jarolift_controller_flash_vx.x.x.bin` file and flash it directly on the ESP. This bin-file is already a merge with bootloader.bin, partitions.bin and the application.bin. You can flash this image an the ESP at address 0x00.  
+Clone the repository:
 
-**Windows**  
-There are several tools available to flash binaries to the ESP.  
-One of them is [espressif-flash-download-tool](https://www.espressif.com/en/support/download/other-tools)
+```sh
+git clone https://github.com/ElHanko/ESP32-Jarolift-Controller.git
+cd ESP32-Jarolift-Controller
+```
 
-**macOS/Linux**  
-for Mac it is hard to find a tool with a graphical UI, but you can simple use the esptool.py:
+# Local secrets
 
-1. open Terminal
-2. install esptool: `pip install esptool`  
-3. optional get the install path: `which esptool.py`  
-4. set path: `export PATH="$PATH:/<path>/esptool.py"` (<- change <path> with result from 3.)
-5. goto path where the bin file is located
-6. get Device String: `ls /dev/tty* | grep usb` (use this in next Step for <UPLOAD-PORT>)
-7. upload: `esptool.py -p <UPLOAD-PORT> write_flash 0x00 esp32_jarolift_controller_flash_vx.x.x.bin`  
+The firmware requires a local secrets file which is intentionally excluded
+from Git.
 
-## OTA-Updates
+Create it from the example:
 
-### local Web OTA-Update
+```sh
+cp include/local_secrets.example.h include/local_secrets.h
+```
 
-The first option is, to download the ota Update File from the latest release at GitHub.
-After you have downloaded this to your computer, you can perform a update with the embedded WebUI OTA-Update.
-You can find the update function in the "Tools" Tab of the WebUI.
+Then edit:
 
-here you can choose "Firmware" and select the `esp32_jarolift_controller_ota_update_vx.x.x.bin` file from the release section
+```text
+include/local_secrets.h
+```
 
-![ota-1](Doc/webUI_ota.gif)
+Two values are required.
 
-### GitHub OTA-Update
+## Setup Mode password
 
-since Version 1.4.0 it is also possible to update the controller directly in the WebUI without downloading the .bin file before.
-If you click on the Version info on the bottom left, a dialog will open. If there is a new version available, you can directly initiate the update here. It will then automatically download and install the latest release from github!
+```cpp
+#define SETUP_AP_PASSWORD "change-this-password"
+```
 
-![ota-2](Doc/github_ota.gif)
+The password must contain between 8 and 63 characters.
 
-### PlatformIO OTA-Update
+It protects the temporary WiFi access point created in Setup Mode.
 
-But it is also possible to download the software wireless with platformio.
-You only have to change the `upload_port` settings in `platformio.ini`
+## Configuration encryption key
 
-There are two predefined Options:
+The file also contains a 16-byte key:
 
-- OPTION 1: direct cable upload
-- OPTION 2: wireless OTA Update
+```cpp
+static constexpr unsigned char CONFIG_ENCRYPTION_KEY[16] = {
+  ...
+};
+```
 
-## Setup Mode
+Generate an individual random value before using the controller.
 
-A `Setup Mode` is available. Setup mode is activated when the ESP is restarted **5** times.
-A maximum of 5 seconds may elapse after each restart.
-
-Example: restart 1/5 - wait 2s - restart 2/5 - wait 2s - restart 3/5 - wait 2s - restart 4/5 - wait 2s - restart /5/5 => Setup-Mode
-
-The "Setup Mode" will also activated if there is no valid wifi and no valid ETH connection configured.
-
-If the ESP goes into "Setup Mode", it will automatically create a own network access point with ssid  
-📶 `"ESP32_Jarolift"`  
-After you are connected to this network, you can open the webUI on ip-address  
-**"<http://192.168.4.1>"**
-
-## Configuration
-
-Here you can setup all the configuration that fits to your heating system and your infrastructure.
-
-- **WiFi**  
-enter your WiFi credentials to connect the ESP to your network
-
-- **Ethernet W5500**  
-use Ethernet connection based on W5500 to connect the ESP to your network
-
-- **Authentication**  
-you can activate the authentication feature and configure user and password.
-
-- **NTP Server**  
-the ESP can connect to a NTP server to get the right Time information.
-The default Time-Zone should fit if you are located in germany. Otherwise you can change it manually
-
-- **MQTT**  
-here you can activate the MQTT communication and enter mandatory parameters
-All the parameters are mandatory!
-
-- **GPIO**  
-Here you can configure the GPIO to connect the CC1101 to the ESP32
-
-- **Jarolift**  
-here you have to configure some Jarolift specific protocol settings
-
-- **Shutter**  
-here you can configure each shutter with individual name
-
-- **Group**  
-here you can define optional shutter-groups
-
-- **Remotes**  
-
-  You can register some of your existing jarolift remote controls here.
-  This can be helpful if you want to recognize and react on the commands of these remote controls.
-
-  You can assign any name you like to the remote control. This is also output in the MQTT message.
-
-  The upper 6 digits of the 8-digit serial number must be entered for the serial number. The serial number can be found in the logbook by pressing the remote control near the controller. A message like this should then appear in the log:  
-  `I (220364) JARO: received remote signal | serial: 0c7c00 | ch: 3 | cmd: 0x8, | rssi: -96 dbm`  
-  
-  With the help of the bit mask and the dialogue behind it, it is then possible to define which shutters are assigned to this remote control, as with the groups. The status of these shutters is then updated depending on the signal received.
-  This means that the status of the roller shutters can be updated even if they are not operated via the ESP controller but via the original remote control.
-  
-  But please be aware that this will not be 100% reliable.
-
-- **Language**  
-There are two languages available. Choose what you prefer.
-The language take effect on the webUI and also on the mqtt messages!
-
-> [!NOTE]
-> All settings are automatically saved when changes are made
+Do not commit the real key.
 
 > [!IMPORTANT]
-> Changes to GPIO or Jarolift settings require a restart!
+> Keep a secure backup of `include/local_secrets.h`.
+>
+> Firmware updates should continue to use the same
+> `CONFIG_ENCRYPTION_KEY`. Changing this key can make passwords already stored
+> in the configuration impossible to decrypt.
 
-![weubui-settings](Doc/webUI_settings.png)
+# Build
 
-## Filemanager
+Build the firmware with:
 
-there is also a builtin file manager to open (show), download (export) and upload (import) the configuration file.
-The configuration is stored in the ```config.json``` file. To backup and restore the configuration you can download and upload this file.
-
-![filemanager](/Doc/webUI_tools.png)
-
-## Teach-in of roller shutters
-
-There are basically several ways to teach-in a roller shutter.
-There are the same options as when using the original remote controls.
-
-### Teach-in by pressing the teach-in button on the motor
-
-Every TDEF motor has a button for programming new remote controls.
-If you press this button, the motor confirms the learning process with a vibration.
-
-> [!TIP]
-> If you cannot reach the button, you can also switch the motor off for a few seconds. For example, by briefly switching off the fuse.
-
-Now press the corresponding ‘Learn button’ in the WebUI in the settings for the respective roller shutter within 5 seconds.
-If the roller shutter has been successfully programmed, the motor will vibrate again.
-
-### Programming by copying an existing radio code
-
-Alternatively, you can also use an already programmed remote control and ‘copy’ it.
-To do this, press the UP and DOWN buttons simultaneously on the already programmed transmitter. Then, on this transmitter, press the STOP button
-eight times on this transmitter. The motor will vibrate briefly to confirm.
-
-Now press the corresponding ‘Learn button’ in the WebUI in the settings for the respective roller shutter within 5 seconds.
-If the roller shutter has been successfully learnt, the motor will vibrate again.
-
-## Migration
-
-It is possible to migrate from a latest version of [madmartin/Jarolift_MQTT](https://github.com/madmartin/Jarolift_MQTT) to this project.
-
-### Get a working Setup of this Project
-
-- get a working version of this project up and running
-- set the right GPIO settings for CC1101
-- set the Master Keys
-- set the Log-Level in the Logger of the WebUI to "Debug"
-
-### Get the right serial number
-
-- execute a shutter UP command of "old" Setup `(madmartin/Jarolift_MQTT)` for **channel 0!**.
-- now you should see a debug message of this command in the Logger of the WebUI.  
-It contains a message with `I (220364) JARO: received remote signal | serial: 0c7c00 | ch: 3 | cmd: 0x8, | rssi: -96 dbm` 
-This **serial** number should be the same as configured in the WebUI of the "old" setup, but now we are sure to have the right one.
-- set this serial in the WebUI of this project
-
-### Get the right Device Counter
-
-- read the actual device counter of the "old" setup from the System Page of the WebUI.
-- set the same Device Counter value in the settings of this project.
-
-### define the Shutter
-
-- define the same shutter as in the "old" setup and activate them.
-
-finished!  
-now restart the ESP and test it.  
-After restarting, first check whether the device counter has been read correctly from the EEPROM. Only continue testing if this is the case.
-If everything done correct, all shutters should work like before. If not, some setting is wrong or you haven´t used the latest version of `(madmartin/Jarolift_MQTT)`. In that case I would prefer to set a new Serial number, reset the Device Counter und learn the shutter again.
-
------
-
-# WebUI
-
-The WebUI is responsive and also offers a mobile layout.
-
-![weubui_dash](Doc/webUI_1.png)
-(Desktop Version)
-
-<img style="display: inline;
-  margin-right: 50px;
-  width: 200px;" src="./Doc/webUI_mobile_1.png">
-<img style="display: inline;
-  margin-right: 50px;
-  width: 200px;" src="./Doc/webUI_mobile_2.png">
-
-(Mobile Version)
-
-## Channels
-
-Once the roller shutters have been configured and activated, they can also be controlled directly in the WebUI.
-
-![webUI_shutter](/Doc/webUI_shutter.png)
-
-## Groups
-
-The groups that are configured in the settings can also be operated directly in the WebUI in the same way as the individual roller shutters.
-
-![webUI_groups](/Doc/webUI_groups.png)
-
-## Timer
-
-The timer function enables the automatic control of individual roller shutters or a selection of several roller shutters as a group.
-A fixed time can be specified as a trigger, or sunrise or sunset with an optional time offset.
-
-![webUI_timer](/Doc/webUI_timer.png)
-
-The selection of roller shutters is supported by an additional dialogue. All configured and activated roller shutters are displayed there. These can be selected there and the bitmask is then automatically created from them.
-
-<img style="width: 444px;" src="./Doc/webUI_bitmask_wiz.png">
-
------
-
-# MQTT
-
-## Commands
-
-### Shutter
-
-To control the shutters you can use the following mqtt commands.
-{UP, OPEN, 0} means, that you can use one of the listed payload commands.
-
-```text
-command:    restart ESP
-topic:      ../cmd/restart
-payload:    none
-
-command:    shutter up
-topic:      ../cmd/shutter/1 ... cmd/shutter/16
-payload:    {UP, OPEN, 0}
-
-command:    shutter down
-topic:      ../cmd/shutter/1 ... cmd/shutter/16
-payload:    {DOWN, CLOSE, 1}
-
-command:    shutter stop
-topic:      ../cmd/shutter/1 ... cmd/shutter/16
-payload:    {STOP, 2}
-
-command:    shutter shade
-topic:      ../cmd/shutter/1 ... cmd/shutter/16
-payload:    {SHADE, 3}
-
+```sh
+./build/build.sh
 ```
 
-### predefined Group
+The build runs inside Docker.
 
-To control shutters a group you can use the following mqtt commands.
-{UP, OPEN, 0} means, that you can use one of the listed payload commands.
-
-```text
-
-command:    group up
-topic:      ../cmd/group/1 ... cmd/group/6
-payload:    {UP, OPEN, 0}
-
-command:    group down
-topic:      ../cmd/group/1 ... cmd/group/6
-payload:    {DOWN, CLOSE, 1}
-
-command:    group stop
-topic:      ../cmd/group/1 ... cmd/group/6
-payload:    {STOP, 2}
-
-command:    group shade
-topic:      ../cmd/group/1 ... cmd/group/6
-payload:    {SHADE, 3}
-
-```
-
-### Group with bitmask
-
-You can also use a generic group command and provide the bitmask to select the shutters directly.  
-The bitmask is a 16-bit number, with the least significant bit (on the right) representing channel 1.  
-A set bit means that the channel belongs to this group.  
-
-**Example**: `0000000000010101` means that channels 1, 3, and 5 belong to this group.
-
-As payload, you can use three different formats to represent the same bitmask:
-
-- **Binary**: `0b0000000000010101`
-- **Hex**: `0x15`
-- **Decimal**: `21`
+The resulting files are written to:
 
 ```text
-
-command:    group up
-topic:      ../cmd/group/up
-payload:    {0b0000000000010101, 0x15, 21}
-
-command:    group down
-topic:      ../cmd/group/down
-payload:    {0b0000000000010101, 0x15, 21}
-
-command:    group stop
-topic:      ../cmd/group/stop
-payload:    {0b0000000000010101, 0x15, 21}
-
-command:    group shade
-topic:      ../cmd/group/shade
-payload:    {0b0000000000010101, 0x15, 21}
-
+build/artifacts/
 ```
 
-## Status
+Relevant artifacts:
 
-### shutter status
+```text
+firmware.bin
+firmware_merged.bin
+bootloader.bin
+partitions.bin
+SHA256SUMS
+```
 
-The controller will also send a status **based on the commands**.  
+`SHA256SUMS` contains checksums for all generated binary files.
+
+The supported build script currently builds the `esp32` PlatformIO
+environment.
+
+# Flashing
+
+The flash workflow also runs esptool inside Docker.
+
+The default serial device is:
+
+```text
+/dev/ttyUSB0
+```
+
+A different port can be supplied as the second argument.
+
+## First installation
+
+```sh
+./build/flash.sh install
+```
+
+or:
+
+```sh
+./build/flash.sh install /dev/ttyUSB0
+```
+
+This writes:
+
+```text
+firmware_merged.bin
+```
+
+at:
+
+```text
+0x0
+```
+
+The script requires explicit confirmation before the write.
+
+> [!WARNING]
+> `install` is intended for the first installation.
+>
+> The complete image overwrites the persistent NVS area. Existing
+> configuration and the Jarolift rolling counter may therefore be lost.
+
+## Firmware update
+
+For normal firmware updates use:
+
+```sh
+./build/flash.sh update
+```
+
+or:
+
+```sh
+./build/flash.sh update /dev/ttyUSB0
+```
+
+This writes only:
+
+```text
+firmware.bin
+```
+
+at:
+
+```text
+0x10000
+```
+
+NVS and LittleFS are preserved.
+
+The flash script also:
+
+- verifies `SHA256SUMS`
+- checks communication with the ESP32
+- verifies that a 4 MB flash chip is detected
+- aborts if the hardware check fails
+
+For an already configured controller, use `update` unless a complete
+reinstallation is explicitly required.
+
+# Setup Mode
+
+Setup Mode is used for initial configuration or recovery.
+
+It can be triggered through the multiple-reset detector by restarting the
+ESP32 repeatedly within the configured time window.
+
+Setup Mode is also entered when required network or WebUI configuration is
+missing.
+
+While Setup Mode is active, the controller creates:
+
+```text
+SSID: ESP32-Jarolift
+```
+
+The WPA2 password is defined by:
+
+```text
+SETUP_AP_PASSWORD
+```
+
+in:
+
+```text
+include/local_secrets.h
+```
+
+After connecting to the access point, open:
+
+```text
+http://192.168.4.1
+```
+
+WebUI authentication is disabled in Setup Mode because access is protected
+by the dedicated WPA2 network.
+
+# WebUI authentication
+
+Authentication is mandatory during normal operation.
+
+Configure:
+
+- username
+- password
+
+before leaving Setup Mode.
+
+If valid WebUI credentials are missing, the controller returns to Setup Mode
+instead of starting normal operation without authentication.
 
 > [!IMPORTANT]
-> But it is important to know, that this status is only a "copy of the received command".  
-> It does not correspond to the real status of the roller shutter, because unfortunately the roller shutter itself does not have a status that could be analyzed. So if the roller shutter is operated via the original remote control, for example, or via local operation, or is stopped during movement, then this status is no longer correct!
+> The WebUI uses HTTP.
+>
+> Do not expose the controller directly to the public Internet.
+
+# Configuration
+
+The WebUI contains settings for:
+
+- WiFi
+- optional W5500 Ethernet
+- WebUI authentication
+- NTP
+- MQTT
+- Home Assistant
+- GPIO
+- Jarolift protocol
+- shutters
+- groups
+- timers
+- known remote controls
+- language
+
+Changes are saved automatically.
+
+Some hardware and Jarolift settings require a restart before they take full
+effect.
+
+# Jarolift configuration
+
+## Master keys
+
+The Jarolift protocol settings require the appropriate KeeLoq master-key
+configuration.
+
+The keys are not stored in this repository.
+
+## Controller sender serial
+
+The ESP32 acts as its own Jarolift transmitter and therefore needs its own
+sender serial prefix.
+
+The configured base serial is a **20-bit value** and must be represented by
+six hexadecimal digits:
 
 ```text
-
-Status:     Shutter OPEN
-topic:      ../status/shutter/1 ... status/shutter/16
-payload:    {0}
-
-Status:     Shutter CLOSED
-topic:      ../status/shutter/1 ... status/shutter/16
-payload:    {100}
-
-Status:     Shutter SHADE
-topic:      ../status/shutter/1 ... status/shutter/16
-payload:    {90}
+000001
+...
+0FFFFF
 ```
 
-### Remotes
-
-If original remote controls are also stored in the settings via the serial number, signals from these remote controls can also be recorded and output via MQTT.
-The information about which shutter is controlled can be seen in the two variables `chBin` and `chDec`. `chBin` shows the used shutter as a 16-bit binary value, while `chDec` shows the same information as a decimal value for easier automation.
-
-```json
-topic:      "../status/remote/<serial-number>"
-payload:    {
-              "name":   "<alias-name>", 
-              "cmd":    "<UP, DOWN, STOP, SHADE>",
-              "chBin":  "<channel-binary>",
-              "chDec":  "<channel-decimal>"
-            }
-```
-
-> [!NOTE]
-> < ../ > is the placeholder for the MQTT topic which is specified in the settings.
-
-## additional information's (read only)
-
-status information about WiFi:
+The first hexadecimal digit must therefore always be:
 
 ```text
-Topic: ESP32-Jarolift-Controller/wifi = {  
-    "status":"online",  
-    "rssi":"-50",  
-    "signal":"90",  
-    "ip":"192.168.1.1",  
-    "date-time":"01.01.2022 - 10:20:30"  
-}
+0
 ```
 
-## Home Assistant
+Examples:
 
-MQTT discovery for Home Assistant makes it easy to get all values in Home Assistant.
-The configured shutters will automatically visible as mqtt device in Home Assistant if HomeAssistant is enabled.
+```text
+000010
+012345
+0abcde
+0fffff
+```
 
-see also the official documentation: <https://www.home-assistant.io/integrations/mqtt/#discovery-messages>
+Invalid:
 
-<img src="Doc/webUI_ha2.png" alt="mqtt_ha1" width="75%">
+```text
+123456
+5c9163
+ffffff
+```
 
-In the mqtt settings you can activate the discovery function and also set the mqtt discovery topic and the device name for Home Assistant  
-<img src="Doc/webUI_ha1.png" alt="mqtt_ha1" width="50%">
+> [!IMPORTANT]
+> Do not use a six-digit value whose first digit is non-zero.
+>
+> The complete on-air Jarolift serial is 28 bits. The controller appends the
+> channel number to the configured 20-bit base serial.
+>
+> Values larger than `0x0FFFFF` would overlap with the function bits in the
+> transmitted telegram and can turn normal commands into different Jarolift
+> functions.
 
------
+The firmware therefore rejects sender serials outside:
 
-# Optional Communication
+```text
+000001 .. 0FFFFF
+```
 
-in addition to mqtt there are more communication options.
+and refuses to transmit if an invalid value is present in the configuration.
 
-## WebUI-Logger
+## Device counter
 
-There is also a log function with which you can record various messages depending on the filter and display them via the WebUI. This can be useful for your own debugging and also for the further development of the software.
+Jarolift uses KeeLoq rolling codes.
 
-<img src="./Doc/webUI_Logger.png" width="75%">
+The ESP32 therefore maintains a persistent device counter.
 
-## Telnet
+Normal firmware updates preserve this counter.
 
-In addition to the WebUI and MQTT, there is also a Telnet interface to communicate with the ESP.
-The interface offers several commands to read out information and send commands.
-An overview of the commands can be called up using the "help" command.
-To connect, a simple Telnet connection can be started via the corresponding IP address of the ESP.
+Avoid resetting or overwriting NVS on an already learned controller unless
+you deliberately intend to reinitialize it.
+
+# Configuring shutters
+
+Up to 16 shutter channels can be configured.
+
+Each channel can have:
+
+- enabled/disabled state
+- individual name
+- Jarolift channel assignment
+
+The configured shutters can then be controlled through the WebUI and MQTT.
+
+# Teach-in of shutters
+
+A controller channel can be taught to a motor in the same general way as an
+additional Jarolift remote control.
+
+## Using the motor learn button
+
+1. Put the motor into learn mode using its programming button.
+2. The motor confirms this with a short movement/vibration.
+3. Within the learning window, press the corresponding Learn button in the
+   controller WebUI.
+4. The motor should confirm the new transmitter.
+
+## Copying an existing remote
+
+With an already learned compatible Jarolift remote:
+
+1. Select the required channel.
+2. Press **UP + DOWN** simultaneously.
+3. Press **STOP eight times** on the existing remote.
+4. The motor confirms that it is ready to learn another transmitter.
+5. Within the learning window, press the corresponding Learn button in the
+   controller WebUI.
+6. The controller transmits the required learn sequence.
+7. The motor should confirm the new transmitter.
+
+Existing physical remotes remain paired when an additional ESP32 sender is
+learned.
+
+# Remote controls
+
+The controller can also receive compatible Jarolift remote-control
+telegrams.
+
+Existing remotes can be configured in the WebUI so that received commands
+can be associated with shutters.
+
+This makes it possible to update the internally inferred shutter state when
+a physical remote is used.
+
+Reception is useful for automation but should not be treated as guaranteed
+state feedback.
+
+# Groups
+
+Up to six predefined shutter groups can be configured.
+
+MQTT also supports arbitrary groups using a 16-bit bitmask.
+
+The least significant bit represents shutter 1.
 
 Example:
 
-`> telnet 192.168.178.193`
+```text
+0000000000010101
+```
 
-<img src="./Doc/telnet.png" width="75%">
+selects:
+
+```text
+1, 3, 5
+```
+
+Equivalent payload representations:
+
+```text
+0b0000000000010101
+0x15
+21
+```
+
+# Timers
+
+The integrated timer can control individual shutters or groups.
+
+Triggers can use:
+
+- fixed time
+- sunrise
+- sunset
+- optional time offset
+
+# Configuration backup
+
+The WebUI includes a configuration file manager.
+
+The controller configuration is stored in:
+
+```text
+config.json
+```
+
+It can be exported and later imported again.
+
+Keep configuration backups secure because they contain information about
+your local controller setup.
+
+# Firmware update through the WebUI
+
+A local firmware update remains available through the authenticated WebUI.
+
+Build the firmware first:
+
+```sh
+./build/build.sh
+```
+
+Then upload:
+
+```text
+build/artifacts/firmware.bin
+```
+
+through the firmware update page in the WebUI.
+
+Only the application image should be used for this type of update.
+
+The following upstream update methods are intentionally not used by this
+fork:
+
+- GitHub automatic OTA
+- ArduinoOTA
+- unauthenticated remote flashing
+
+# MQTT
+
+The configured base MQTT topic is represented below as:
+
+```text
+<topic>
+```
+
+## Shutter commands
+
+### Up
+
+```text
+topic:   <topic>/cmd/shutter/1 ... <topic>/cmd/shutter/16
+payload: UP
+         OPEN
+         0
+```
+
+### Down
+
+```text
+topic:   <topic>/cmd/shutter/1 ... <topic>/cmd/shutter/16
+payload: DOWN
+         CLOSE
+         1
+```
+
+### Stop
+
+```text
+topic:   <topic>/cmd/shutter/1 ... <topic>/cmd/shutter/16
+payload: STOP
+         2
+```
+
+### Shade
+
+```text
+topic:   <topic>/cmd/shutter/1 ... <topic>/cmd/shutter/16
+payload: SHADE
+         3
+```
+
+## Predefined group commands
+
+```text
+<topic>/cmd/group/1
+...
+<topic>/cmd/group/6
+```
+
+Supported commands:
+
+```text
+UP
+OPEN
+0
+
+DOWN
+CLOSE
+1
+
+STOP
+2
+
+SHADE
+3
+```
+
+## Bitmask group commands
+
+```text
+<topic>/cmd/group/up
+<topic>/cmd/group/down
+<topic>/cmd/group/stop
+<topic>/cmd/group/shade
+```
+
+The payload is the desired 16-bit shutter mask.
+
+Example for shutters 1, 3 and 5:
+
+```text
+0b0000000000010101
+```
+
+or:
+
+```text
+0x15
+```
+
+or:
+
+```text
+21
+```
+
+# MQTT status
+
+## Shutter state
+
+The controller publishes an internally inferred shutter state.
+
+Typical values:
+
+```text
+OPEN   -> 0
+CLOSED -> 100
+SHADE  -> 90
+```
+
+> [!IMPORTANT]
+> This is not direct position feedback from the motor.
+>
+> Jarolift TDEF motors do not provide an absolute shutter position through
+> the radio protocol used here. The controller derives the state from commands
+> it knows about.
+>
+> Physical operation, missed radio telegrams or stopping the shutter from
+> another source can therefore make the reported state differ from reality.
+
+## Received remote signals
+
+Configured physical remotes can be published through:
+
+```text
+<topic>/status/remote/<serial-number>
+```
+
+Example structure:
+
+```json
+{
+  "name": "<alias-name>",
+  "cmd": "<UP, DOWN, STOP, SHADE>",
+  "chBin": "<channel-binary>",
+  "chDec": "<channel-decimal>"
+}
+```
+
+# Home Assistant
+
+Home Assistant integration is available through MQTT Discovery.
+
+When enabled, configured shutters are announced automatically to Home
+Assistant through the configured MQTT broker.
+
+The reported shutter state has the same limitation as the normal MQTT status:
+it is inferred and is not absolute position feedback from the motor.
+
+# Migration from madmartin/Jarolift_MQTT
+
+Migration from an existing
+[madmartin/Jarolift_MQTT](https://github.com/madmartin/Jarolift_MQTT)
+installation is possible.
+
+Important values to preserve are:
+
+- GPIO configuration
+- Jarolift master-key configuration
+- controller sender serial
+- KeeLoq device counter
+- shutter/channel assignment
+
+The sender serial and device counter together define the rolling-code state
+of the transmitter.
+
+Do not arbitrarily reset the counter of an already learned sender.
+
+If you intentionally choose a new ESP32 sender identity, learn that new
+transmitter into the motors instead.
+
+# Updating from upstream
+
+The original project is configured as the Git upstream of this fork.
+
+Typical local repository layout:
+
+```text
+origin    -> ElHanko/ESP32-Jarolift-Controller
+upstream  -> dewenni/ESP32-Jarolift-Controller
+```
+
+Upstream changes should be reviewed before being integrated because this fork
+intentionally differs in security, build and update architecture.
+
+# Versioning
+
+This fork uses:
+
+```text
+year.major.bugfix
+```
+
+Example:
+
+```text
+2026.1.0
+```
+
+Meaning:
+
+```text
+2026 = year
+1    = major release within that year
+0    = bugfix level
+```
+
+A bugfix release increments the last component:
+
+```text
+2026.1.1
+```
+
+A larger feature release increments the middle component:
+
+```text
+2026.2.0
+```
+
+# Security notes
+
+This controller operates inside a trusted local network.
+
+Recommended practice:
+
+- use an individual Setup Mode password
+- use a unique configuration encryption key
+- use a strong WebUI password
+- keep `include/local_secrets.h` private
+- do not expose the WebUI directly to the Internet
+- back up configuration and local secrets securely
+- use `update`, not `install`, for normal firmware upgrades
+
+# Credits and upstream
+
+This project is derived from:
+
+[dewenni/ESP32-Jarolift-Controller](https://github.com/dewenni/ESP32-Jarolift-Controller)
+
+which itself builds on ideas and code from:
+
+[madmartin/Jarolift_MQTT](https://github.com/madmartin/Jarolift_MQTT)
+
+The original Jarolift protocol analysis and controller work also traces back
+to work by Steffen Hille and the Bastelbudenbuben project.
+
+This fork does not claim authorship of the original project or the underlying
+Jarolift protocol implementation.
+
+# Disclaimer
+
+This is an independent open-source project.
+
+It is not affiliated with, endorsed by or supported by the manufacturer of
+Jarolift products.
+
+Jarolift is a trademark of its respective owner.
+
+Radio transmitters are subject to local regulations. The user is responsible
+for operating compatible hardware within the legal limits applicable at their
+location.
+
+Use this software at your own risk.
+
+# License
+
+See [`LICENSE`](LICENSE) and the individual license files of vendored and
+third-party components.
