@@ -11,7 +11,14 @@
 .vscode/extensions.json
 .vscode/c_cpp_properties.json
 .travis.yml
+__pycache__/
+*.pyc
 
 connect.txt
 zTest/
 TODO.txt
+# Local build secrets
+include/local_secrets.h
+
+build/artifacts/*
+!build/artifacts/.gitkeep

@@ -90,7 +90,7 @@ void webUISetup() {
   });
 
   webUI.setCredentials(config.auth.user, config.auth.password);
-  webUI.setAuthentication(config.auth.enable);
+  webUI.setAuthentication(!setupMode);
 
   webUI.begin();
 } // END SETUP

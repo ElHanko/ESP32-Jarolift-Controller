@@ -260,12 +260,23 @@ void JaroliftController::enterRx() {
 void JaroliftController::enterTx() {
   cc1101_.setTxState();
   delay(2);
+
   unsigned long startTime = micros();
   uint8_t marcState = 0;
-  while (((marcState = cc1101_.readStatusReg(CC1101_MARCSTATE)) & 0x1F) != 0x13 && ((marcState & 0x1F) != 0x14) && ((marcState & 0x1F) != 0x15)) {
-    if (micros() - startTime > 50000)
+  bool timedOut = false;
+
+  while (((marcState = cc1101_.readStatusReg(CC1101_MARCSTATE)) & 0x1F) != 0x13 &&
+         ((marcState & 0x1F) != 0x14) &&
+         ((marcState & 0x1F) != 0x15)) {
+    if (micros() - startTime > 50000) {
+      timedOut = true;
       break;
+    }
   }
+
+  ESP_LOGI(TAG, "TX state | MARCSTATE: 0x%02x | timeout: %s",
+           marcState & 0x1F,
+           timedOut ? "yes" : "no");
 }
 
 /**
@@ -840,6 +851,7 @@ void JaroliftController::processRxData() {
     uint8_t ch_low = (decoded >> 24) & 0xFF;
     uint8_t ch_high = rxDiscH_ & 0xFF;
     uint16_t channel = (ch_high << 8) | ch_low;
+    ESP_LOGI(TAG, "RX decoded | serial: 0x%08lx | function: 0x%x | channel: 0x%04x", rxSerial_, rxFunction_, channel);
 
     // callback function to receive information outside this library
     remoteCallback(rxSerial_, rxFunction_, channel);
@@ -865,6 +877,7 @@ void JaroliftController::begin() {
   devCount_ = getDeviceCounter();
 
   cc1101_.setGPIO(gpio_.sck, gpio_.miso, gpio_.mosi, gpio_.cs, gpio_.gdo0);
+  cc1101_.setTxPowerAmp(PA_LongDistance);
   if (!cc1101_.init()) {
     ESP_LOGE(TAG, "Initialisation of the CC1101 module aborted!");
     return;
@@ -872,7 +885,6 @@ void JaroliftController::begin() {
   cc1101_.setSyncWord(kSyncWord, false);
   cc1101_.setCarrierFreq(CFREQ_433);
   cc1101_.disableAddressCheck();
-  cc1101_.setTxPowerAmp(PA_LongDistance);
 
   pinMode(gpio_.gdo0, OUTPUT);
   pinMode(gpio_.gdo2, INPUT_PULLUP);

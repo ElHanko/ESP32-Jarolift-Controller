@@ -24,6 +24,13 @@ function closeGrpMaskHelp() {
   }
 }
 
+function validateJaroliftSerial(input) {
+  validateHex(input);
+
+  const valid = /^0[0-9a-f]{5}$/.test(input.value);
+  input.setAttribute("aria-invalid", valid ? "false" : "true");
+}
+
 function setupBitmaskDialog() {
   const bitmaskDialog = document.getElementById("bitmask_dialog");
   const applyButton = document.getElementById("apply_bitmask");

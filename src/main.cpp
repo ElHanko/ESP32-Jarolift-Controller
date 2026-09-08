@@ -1,11 +1,9 @@
 // includes
-#include <ArduinoOTA.h>
 #include <basics.h>
 #include <config.h>
 #include <jarolift.h>
 #include <message.h>
 #include <mqtt.h>
-#include <telnet.h>
 #include <webUI.h>
 #include <webUIupdates.h>
 
@@ -20,7 +18,6 @@ static bool main_reboot = true; // reboot flag
 static const char *TAG = "MAIN"; // LOG TAG
 
 static auto &wdt = EspSysUtil::Wdt::getInstance();
-static auto &ota = EspSysUtil::OTA::getInstance();
 
 /**
  * *******************************************************************
@@ -51,29 +48,6 @@ void setup() {
   // basic setup functions
   basicSetup();
 
-  // Setup OTA
-  ArduinoOTA.onStart([]() {
-    ESP_LOGI(TAG, "OTA-started");
-    wdt.disable(); // disable watchdog timer
-    ota.setActive(true);
-  });
-  ArduinoOTA.onEnd([]() {
-    ESP_LOGI(TAG, "OTA-finished");
-    if (!setupMode) {
-      wdt.enable();
-    }
-    ota.setActive(false);
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    ESP_LOGI(TAG, "OTA-error");
-    if (!setupMode) {
-      wdt.enable();
-    }
-    ota.setActive(false);
-  });
-  ArduinoOTA.setHostname(config.wifi.hostname);
-  ArduinoOTA.begin();
-
   // jarolift setup
   if (!setupMode) {
     jaroliftSetup();
@@ -81,8 +55,6 @@ void setup() {
   // webUI Setup
   webUISetup();
 
-  // telnet Setup
-  setupTelnet();
 }
 
 /**
@@ -98,9 +70,6 @@ void loop() {
     esp_task_wdt_reset();
   }
 
-  // OTA Update
-  ArduinoOTA.handle();
-
   // double reset detector
   mrd->loop();
 
@@ -109,9 +78,6 @@ void loop() {
 
   // Message Service
   messageCyclic();
-
-  // telnet communication
-  cyclicTelnet();
 
   // check if config has changed
   configCyclic();

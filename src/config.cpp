@@ -4,6 +4,7 @@
 #include <basics.h>
 #include <config.h>
 #include <message.h>
+#include <local_secrets.h>
 
 /* D E C L A R A T I O N S ****************************************************/
 
@@ -22,7 +23,6 @@ muTimer checkTimer = muTimer(); // timer to refresh other values
 static const char *TAG = "CFG"; // LOG TAG
 char encrypted[256] = {0};
 char decrypted[128] = {0};
-const unsigned char key[16] = {0x6d, 0x79, 0x5f, 0x73, 0x65, 0x63, 0x75, 0x72, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x31, 0x32, 0x33};
 
 /* P R O T O T Y P E S ********************************************************/
 void checkGPIO();
@@ -273,7 +273,7 @@ void configSaveToFile() {
   doc["wifi"]["enable"] = config.wifi.enable;
   doc["wifi"]["ssid"] = config.wifi.ssid;
 
-  if (EspStrUtil::encryptPassword(config.wifi.password, key, encrypted, sizeof(encrypted))) {
+  if (EspStrUtil::encryptPassword(config.wifi.password, CONFIG_ENCRYPTION_KEY, encrypted, sizeof(encrypted))) {
     doc["wifi"]["password"] = encrypted;
   } else {
     ESP_LOGE(TAG, "error encrypting WiFi Password");
@@ -304,7 +304,7 @@ void configSaveToFile() {
   doc["mqtt"]["server"] = config.mqtt.server;
   doc["mqtt"]["user"] = config.mqtt.user;
 
-  if (EspStrUtil::encryptPassword(config.mqtt.password, key, encrypted, sizeof(encrypted))) {
+  if (EspStrUtil::encryptPassword(config.mqtt.password, CONFIG_ENCRYPTION_KEY, encrypted, sizeof(encrypted))) {
     doc["mqtt"]["password"] = encrypted;
   } else {
     ESP_LOGE(TAG, "error encrypting mqtt Password");
@@ -331,7 +331,6 @@ void configSaveToFile() {
   doc["gpio"]["cs"] = config.gpio.cs;
   doc["gpio"]["led_setup"] = config.gpio.led_setup;
 
-  doc["auth"]["enable"] = config.auth.enable;
   doc["auth"]["user"] = config.auth.user;
   doc["auth"]["password"] = config.auth.password;
 
@@ -469,7 +468,7 @@ void configLoadFromFile() {
       EspStrUtil::readJSONstring(config.wifi.password, sizeof(config.wifi.password), doc["wifi"]["password"]);
     } else {
       EspStrUtil::readJSONstring(encrypted, sizeof(encrypted), doc["wifi"]["password"]);
-      if (EspStrUtil::decryptPassword(encrypted, key, config.wifi.password, sizeof(config.wifi.password))) {
+      if (EspStrUtil::decryptPassword(encrypted, CONFIG_ENCRYPTION_KEY, config.wifi.password, sizeof(config.wifi.password))) {
         // ESP_LOGD(TAG, "decrypted WiFi password: %s", config.wifi.password);
       } else {
         ESP_LOGE(TAG, "error decrypting WiFi password");
@@ -508,7 +507,7 @@ void configLoadFromFile() {
       EspStrUtil::readJSONstring(config.mqtt.password, sizeof(config.mqtt.password), doc["mqtt"]["password"]);
     } else {
       EspStrUtil::readJSONstring(encrypted, sizeof(encrypted), doc["mqtt"]["password"]);
-      if (EspStrUtil::decryptPassword(encrypted, key, config.mqtt.password, sizeof(config.mqtt.password))) {
+      if (EspStrUtil::decryptPassword(encrypted, CONFIG_ENCRYPTION_KEY, config.mqtt.password, sizeof(config.mqtt.password))) {
         // ESP_LOGD(TAG, "decrypted mqtt password: %s", config.mqtt.password);
       } else {
         ESP_LOGE(TAG, "error decrypting mqtt password");
@@ -536,7 +535,6 @@ void configLoadFromFile() {
     config.gpio.mosi = doc["gpio"]["mosi"];
     config.gpio.cs = doc["gpio"]["cs"];
 
-    config.auth.enable = doc["auth"]["enable"];
     EspStrUtil::readJSONstring(config.auth.user, sizeof(config.auth.user), doc["auth"]["user"]);
     EspStrUtil::readJSONstring(config.auth.password, sizeof(config.auth.password), doc["auth"]["password"]);
 
@@ -631,6 +629,12 @@ void configFinalCheck() {
   } else if (config.wifi.enable == false && config.eth.enable == false) {
     // no network enabled => start AP-Mode
     ESP_LOGW(TAG, "SETUP-MODE-REASON: WiFi and ETH disabled");
+    setupMode = true;
+  }
+
+  // normal operation requires WebUI credentials
+  if (!setupMode && (strlen(config.auth.user) == 0 || strlen(config.auth.password) == 0)) {
+    ESP_LOGW(TAG, "SETUP-MODE-REASON: WebUI credentials not configured");
     setupMode = true;
   }
 

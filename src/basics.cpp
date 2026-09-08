@@ -6,6 +6,15 @@
 #include <SPI.h>
 #include <basics.h>
 
+#if __has_include(<local_secrets.h>)
+#include <local_secrets.h>
+#else
+#error "Missing include/local_secrets.h - copy local_secrets.example.h and set SETUP_AP_PASSWORD"
+#endif
+
+static_assert(sizeof(SETUP_AP_PASSWORD) - 1 >= 8, "SETUP_AP_PASSWORD must be at least 8 characters");
+static_assert(sizeof(SETUP_AP_PASSWORD) - 1 <= 63, "SETUP_AP_PASSWORD must be at most 63 characters");
+
 #ifndef ETH_PHY_TYPE
 #define ETH_PHY_TYPE ETH_PHY_W5500
 #define ETH_PHY_ADDR 1
@@ -117,7 +126,7 @@ void setupWiFi() {
   if (setupMode) {
     // start Accesspoint for initial setup
     WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
-    WiFi.softAP("ESP32-Jarolift");
+    WiFi.softAP("ESP32-Jarolift", SETUP_AP_PASSWORD);
     ESP_LOGI(TAG, "WiFi Mode: AccessPoint SSID: ESP32-Jarolift / IP: http://192.168.4.1");
   } else if (config.wifi.enable) {
 
@@ -211,7 +220,7 @@ void basicSetup() {
   setupWiFi();
 
   // Ethernet
-  if (config.eth.enable) {
+  if (!setupMode && config.eth.enable) {
     setupETH();
   }
 

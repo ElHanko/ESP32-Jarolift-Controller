@@ -183,18 +183,6 @@
             <!-- Authentication -->
             <details>
               <summary data-i18n="access"></summary>
-              <div class="section-header">
-                <label for="auth_enable" data-i18n="activate"></label>
-                <div class="switch-container">
-                  <input
-                    name="auth_enable"
-                    type="checkbox"
-                    role="switch"
-                    hideOpt="OPT_AUTH"
-                    id="cfg_auth_enable" />
-                </div>
-              </div>
-              <br />
               <label for="auth_user" data-i18n="user"></label>
               <input type="text" id="cfg_auth_user" name="auth_user" />
               <label for="auth_passw" data-i18n="password"></label>
@@ -432,8 +420,8 @@
                   data-type="hex"
                   data-length="6"
                   id="cfg_jaro_serial"
-                  oninput="validateHex(this)"
-                  pattern="[0-9a-fA-F]{1,6}"
+                  oninput="validateJaroliftSerial(this)"
+                  pattern="0[0-9a-fA-F]{5}"
                   title="Enter up to 6 HEX digits"
                   maxlength="6"
                   onblur="formatHex(this)"
