@@ -216,6 +216,13 @@ uint8_t getCC1101Rssi() { return jarolift.getRssi(); }
  * *******************************************************************/
 void processJaroCommands() {
   if (!jaroCmdQueue.empty()) {
+    if (config.jaro.serial == 0 || config.jaro.serial > 0x0FFFFF) {
+      ESP_LOGE(TAG, "Jarolift command ignored: invalid serial 0x%06lx",
+               config.jaro.serial);
+      jaroCmdQueue.pop();
+      return;
+    }
+
     JaroCommand cmd = jaroCmdQueue.front();
 
     if (cmd.cmdType == JaroCommand::SINGLE) {
