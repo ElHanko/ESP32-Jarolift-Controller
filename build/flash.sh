@@ -86,5 +86,16 @@ docker run --rm \
             esptool --chip esp32 --port '$PORT' write-flash \
             '$OFFSET' '/out/$(basename "$IMAGE")'"
 
+if [ "$MODE" = "update" ]; then
+    echo
+    echo "Setze app0 als Bootpartition ..."
+
+    docker run --rm \
+        --device="$PORT:$PORT" \
+        python:3.13-slim \
+        sh -lc "pip install --quiet --no-cache-dir esptool==5.4.0 &&
+                esptool --chip esp32 --port '$PORT' erase-region 0xe000 0x2000"
+fi
+
 echo
 echo "Flash erfolgreich abgeschlossen."
