@@ -1,4 +1,74 @@
 **Changelog**
+# 2026.2.0
+
+## what's new
+
+### Schedules
+
+The WebUI schedule configuration has been redesigned around explicit modes for fixed time, astronomical events, later-of and earlier-of operation.
+
+Existing configurations that use both legacy minimum and maximum time limits remain unchanged until a new mode is explicitly selected.
+
+Schedule enable states can now also be controlled through MQTT and are published as retained status topics.
+
+### Update and configuration safety
+
+Configuration uploads are now validated before replacing the active configuration file. Normal configuration saves also use a temporary file and only replace the active configuration after a successful write.
+
+WebUI firmware uploads now track a single active OTA session, reject competing uploads, abort safely on errors or disconnects, validate the announced firmware size and require a complete image before activation.
+
+Serial firmware updates now preserve NVS and LittleFS while resetting only the OTA boot state required to activate the newly written application.
+
+### Jarolift and network robustness
+
+Jarolift channel and receive handling has been hardened, invalid channels are rejected consistently and receive buffer handling is bounded.
+
+The configured Jarolift learn mode is now applied correctly.
+
+Wi-Fi disconnect handling has been improved and Ethernet-only operation no longer causes an unnecessary restart when Wi-Fi is disabled.
+
+MQTT handling now rejects fragmented and oversized payloads before processing them.
+
+### WebUI reliability
+
+WebUI callbacks are now queued instead of using a single shared callback slot. Duplicate switch callbacks in the browser have also been prevented.
+
+System information now reports usage of the active application partition instead of comparing firmware size against free sketch space.
+
+The built-in help has been updated to match the current configuration and terminology.
+
+### Build and release process
+
+The ESP32 build platform has been updated to Arduino-ESP32 3.3.11 based on ESP-IDF 5.5.5, together with updated WebUI, networking and JSON dependencies.
+
+GitHub Pages are now generated from the current WebUI sources.
+
+Release creation now builds fresh firmware assets, verifies the project version and changelog entry against the Git tag, and uses the current changelog section directly as the release notes.
+
+## changelog
+
+* [FEATURE] add explicit schedule modes for fixed time, Astro, later time and earlier time
+* [FEATURE] add MQTT control and retained status for schedule enable states
+* [FIX] harden Jarolift channel validation and receive buffer handling
+* [FIX] apply the configured Jarolift learn mode correctly
+* [FIX] handle disabled and disconnected Wi-Fi correctly
+* [FIX] validate configuration uploads before replacing the active configuration
+* [FIX] preserve the active configuration when saving fails
+* [FIX] preserve configuration defaults during initialization
+* [FIX] make serial firmware updates OTA-slot safe while preserving NVS and LittleFS
+* [FIX] harden WebUI OTA upload ownership, size validation and failure handling
+* [FIX] reject fragmented and oversized MQTT payloads
+* [FIX] queue WebUI callback events and prevent duplicate switch callbacks
+* [FIX] report active application partition usage correctly
+* [IMPROVE] update and expand WebUI help and logging terminology
+* [BUILD] update to Arduino-ESP32 3.3.11 / ESP-IDF 5.5.5 and current dependencies
+* [CI] generate GitHub Pages from current WebUI sources
+* [CI] build and verify release assets during release creation
+* [CHANGE] use changelog.md as the single release-notes source
+* [CLEANUP] remove unused Telnet, HTTPClient, authentication flag and obsolete WebUI remnants
+
+---
+
 # 2026.1.0
 
 ## what's new
