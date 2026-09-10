@@ -107,7 +107,6 @@ struct s_cfg_gpio {
 };
 
 struct s_cfg_auth {
-  bool enable = true;
   char user[64];
   char password[64];
 };
