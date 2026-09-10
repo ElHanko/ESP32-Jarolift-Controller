@@ -17,6 +17,10 @@ docker run --rm \
     cp -a /src/. /work/
     cd /work
 
+    apt-get update
+    apt-get install -y --no-install-recommends git
+    rm -rf /var/lib/apt/lists/*
+
     pip install --quiet --no-cache-dir platformio==6.1.19
     pio run -e esp32
 
