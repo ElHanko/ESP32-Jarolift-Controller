@@ -137,7 +137,7 @@ extern s_config config;
 extern bool setupMode;
 void configSetup();
 void configCyclic();
-void configSaveToFile();
+bool configSaveToFile();
 void configLoadFromFile();
 void configInitValue();
 void configGPIO();

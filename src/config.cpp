@@ -201,8 +201,9 @@ void configCyclic() {
   if (checkTimer.cycleTrigger(1000) && configInitDone) {
     unsigned long hashNew = EspStrUtil::hash(&config, sizeof(s_config));
     if (hashNew != hashOld) {
-      hashOld = hashNew;
-      configSaveToFile();
+      if (configSaveToFile()) {
+        hashOld = hashNew;
+      }
     }
   }
 }
@@ -260,9 +261,9 @@ void configInitValue() {
  * *******************************************************************
  * @brief   save configuration to file
  * @param   none
- * @return  none
+ * @return  true on success, false on failure
  * *******************************************************************/
-void configSaveToFile() {
+bool configSaveToFile() {
 
   JsonDocument doc; // reserviert 2048 Bytes für das JSON-Objekt
 
@@ -414,25 +415,39 @@ void configSaveToFile() {
     timer["max_time_value"] = config.timer[i].max_time_value;
   }
 
-  // Delete existing file, otherwise the configuration is appended to the file
-  LittleFS.remove(filename);
+  constexpr char tempFilename[] = "/config.tmp";
+  const size_t expectedSize = measureJson(doc);
 
-  // Open file for writing
-  File file = LittleFS.open(filename, FILE_WRITE);
+  // Write the new configuration without touching the active file.
+  File file = LittleFS.open(tempFilename, FILE_WRITE);
   if (!file) {
-    ESP_LOGE(TAG, "Failed to create file");
-    return;
+    ESP_LOGE(TAG, "Failed to create temporary config file");
+    LittleFS.remove(tempFilename);
+    return false;
   }
 
-  // Serialize JSON to file
-  if (serializeJson(doc, file) == 0) {
-    ESP_LOGE(TAG, "Failed to write to file");
-  } else {
-    ESP_LOGI(TAG, "config successfully saved to file: %s - Version: %i", filename, CFG_VERSION);
-  }
-
-  // Close the file
+  const size_t writtenSize = serializeJson(doc, file);
+  file.flush();
   file.close();
+
+  File writtenFile = LittleFS.open(tempFilename, FILE_READ);
+  const bool writeSucceeded = writtenSize == expectedSize && writtenFile && writtenFile.size() == expectedSize;
+  writtenFile.close();
+
+  if (!writeSucceeded) {
+    ESP_LOGE(TAG, "Failed to write temporary config file");
+    LittleFS.remove(tempFilename);
+    return false;
+  }
+
+  if (!LittleFS.rename(tempFilename, filename)) {
+    ESP_LOGE(TAG, "Failed to replace config file");
+    LittleFS.remove(tempFilename);
+    return false;
+  }
+
+  ESP_LOGI(TAG, "config successfully saved to file: %s - Version: %i", filename, CFG_VERSION);
+  return true;
 }
 
 /**
@@ -612,8 +627,9 @@ void configLoadFromFile() {
 
   // save config if version is different
   if (config.version != CFG_VERSION) {
-    configSaveToFile();
-    ESP_LOGI(TAG, "config file was updated from version %i to version: %i", config.version, CFG_VERSION);
+    if (configSaveToFile()) {
+      ESP_LOGI(TAG, "config file was updated from version %i to version: %i", config.version, CFG_VERSION);
+    }
   } else {
     ESP_LOGD(TAG, "config file version %i was successfully loaded", config.version);
   }
