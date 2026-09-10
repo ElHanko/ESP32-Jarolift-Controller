@@ -14,7 +14,6 @@
 #include <ESPmDNS.h>
 #include <EspStrUtil.h>
 #include <EspSysUtil.h>
-#include <HTTPClient.h>
 #include <SPI.h>
 #include <WiFi.h>
 #include <muTimer.h>

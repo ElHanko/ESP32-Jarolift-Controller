@@ -1,6 +1,5 @@
 #include <basics.h>
 #include <message.h>
-#include <telnet.h>
 
 /* D E C L A R A T I O N S ****************************************************/
 #define MSG_BUF_SIZE 1024 // buffer size for messaging
@@ -147,12 +146,6 @@ int custom_vprintf(const char *format, va_list args) {
 
   // add to log buffer
   addLogBuffer(cleaned_message);
-
-  // forward to telnet stream
-  if (telnetIF.serialStream) {
-    telnet.printf("%s", cleaned_message);
-    telnetShell();
-  }
 
   // release copy of va_list
   va_end(args_copy);
