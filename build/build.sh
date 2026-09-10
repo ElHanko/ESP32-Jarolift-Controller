@@ -28,6 +28,8 @@ docker run --rm \
     cp .pio/build/esp32/firmware_merged.bin /out/
     cp .pio/build/esp32/bootloader.bin /out/
     cp .pio/build/esp32/partitions.bin /out/
+    cp release/esp32_jarolift_ota_*.bin /out/
+    cp release/esp32_jarolift_flash_*.bin /out/
 
     cd /out
     sha256sum *.bin > SHA256SUMS
