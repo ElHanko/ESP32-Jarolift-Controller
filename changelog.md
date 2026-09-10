@@ -1,4 +1,80 @@
 **Changelog**
+# 2026.1.0
+
+## what's new
+
+### New project baseline
+
+This release establishes the new maintained project baseline.
+
+A reproducible Docker-based build process and separate installation/update flash scripts were added. Local build secrets are no longer intended to be stored directly in the repository.
+
+The previously external project helper libraries are now maintained as local project dependencies to provide a reproducible working baseline.
+
+### Jarolift robustness
+
+Jarolift transmission handling was hardened and additional diagnostics were added for the CC1101 transmit state.
+
+Jarolift serial numbers are now validated before they are accepted by the WebUI and again before queued commands are transmitted. Commands with an invalid serial number are rejected instead of being sent.
+
+### Update handling
+
+The old direct GitHub-OTA implementation was removed. Firmware updates continue to be available through the normal firmware upload/update paths.
+
+### Versioning
+
+The project starts a new year-based versioning scheme with `2026.1.0`.
+
+## changelog
+
+* [FEATURE] add reproducible Docker-based firmware build
+* [FEATURE] add separate guarded install and firmware-update flash scripts
+* [CHANGE] establish local project copies of the required helper libraries
+* [CHANGE] move local build secrets out of tracked project configuration
+* [CHANGE] remove the old direct GitHub-OTA implementation
+* [IMPROVE] harden Jarolift CC1101 transmit-state handling and diagnostics
+* [FIX] validate Jarolift serial numbers before accepting and transmitting commands
+* [CHANGE] switch project versioning from `v1.x.x` to the year-based `2026.x.x` scheme
+
+---
+
+# v1.9.0
+
+## what's new
+
+### Service Commands
+
+there is a new WebUI Page with service commands like:
+
+* set shade
+* set/delete upper end point
+* set/delete lower end point
+
+### remote signals (update)
+
+The MQTT message for remote signals has been updated. The information about which shutter is controlled can be seen in the two variables `chBin` and `chDec`. `chBin` shows the used shutter as a 16-bit binary value, while `chDec` shows the same information as a decimal value for easier automation.
+
+```json
+topic:      ../status/remote/<serial-number>
+payload:    {
+              "name":   "<alias-name>",
+              "cmd":    "<UP, DOWN, STOP, SHADE>",
+              "chBin":  "<channel-binary>",
+              "chDec":  "<channel-decimal>"
+            }
+```
+
+## changelog
+
+* [FIX] bugfix github ota asset check #40, #45
+* [FEATURE] service page with new service commands
+* [FEATURE] new "unlearn" command in shutter settings
+* [CHANGE] "set shade" was moved from settings to service page
+* [CHANGE] MQTT messages for remote signals have been updated
+* [CHANGE] internal redesign in JaroliftController-Lib
+* [UPDATE] dewenni/EspWebUI @ 0.0.4
+
+---
 
 # v1.8.0
 
