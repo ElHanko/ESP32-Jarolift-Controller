@@ -36,7 +36,7 @@
         <div class="grid" id="timers-container">
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 1</div>
+              <div class="dash-header" data-i18n="schedule_1"></div>
               <div class="section-header">
                 <label for="timer0_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -51,16 +51,25 @@
               <br />
               <form id="timerForm0" class="OPT_TIMER0">
                 <fieldset>
-                  <label for="timeType0" data-i18n="timer_type"></label>
+                  <label for="scheduleMode0" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_0_type"
-                    name="timeType0"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_0_mode"
+                    name="scheduleMode0"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput0" style="display: none">
+                    <label for="timeType0" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_0_type" name="timeType0">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput0">
                     <label for="timeValue0" data-i18n="time_HH_MM"></label>
@@ -85,48 +94,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer0-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        data-toggle="timeInputs"
-                        name="timer0_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME0"
-                        id="cfg_timer_0_use_min_time" />
-
-                      <label
-                        for="timer0_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_0_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME0" id="minTimeInput0">
+                      <label for="minTimeValue0" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_0_min_time_value"
                         name="minTimeValue0" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        data-toggle="timeInputs"
-                        name="timer0_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME0"
-                        id="cfg_timer_0_use_max_time" />
-
-                      <label
-                        for="timer0_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_0_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME0" id="maxTimeInput0">
+                      <label for="maxTimeValue0" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_0_max_time_value"
                         name="maxTimeValue0" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning0"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <!-- Dropdown for shutter cmd -->
                   <label for="command0" data-i18n="command"></label>
@@ -222,7 +219,7 @@
           </article>
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 2</div>
+              <div class="dash-header" data-i18n="schedule_2"></div>
               <div class="section-header">
                 <label for="timer1_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -237,16 +234,25 @@
               <br />
               <form id="timerForm1" class="OPT_TIMER1">
                 <fieldset>
-                  <label for="timeType1" data-i18n="timer_type"></label>
+                  <label for="scheduleMode1" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_1_type"
-                    name="timeType1"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_1_mode"
+                    name="scheduleMode1"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput1" style="display: none">
+                    <label for="timeType1" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_1_type" name="timeType1">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput1">
                     <label for="timeValue1" data-i18n="time_HH_MM"></label>
@@ -271,48 +277,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer1-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        data-toggle="timeInputs"
-                        name="timer1_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME1"
-                        id="cfg_timer_1_use_min_time" />
-
-                      <label
-                        for="timer1_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_1_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME1" id="minTimeInput1">
+                      <label for="minTimeValue1" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_1_min_time_value"
                         name="minTimeValue1" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        data-toggle="timeInputs"
-                        name="timer1_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME1"
-                        id="cfg_timer_1_use_max_time" />
-
-                      <label
-                        for="timer1_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_1_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME1" id="maxTimeInput1">
+                      <label for="maxTimeValue1" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_1_max_time_value"
                         name="maxTimeValue1" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning1"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <!-- Dropdown for shutter cmd -->
                   <label for="command1" data-i18n="command"></label>
@@ -408,7 +402,7 @@
           </article>
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 3</div>
+              <div class="dash-header" data-i18n="schedule_3"></div>
               <div class="section-header">
                 <label for="timer2_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -423,16 +417,25 @@
               <br />
               <form id="timerForm2" class="OPT_TIMER2">
                 <fieldset>
-                  <label for="timeType2" data-i18n="timer_type"></label>
+                  <label for="scheduleMode2" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_2_type"
-                    name="timeType2"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_2_mode"
+                    name="scheduleMode2"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput2" style="display: none">
+                    <label for="timeType2" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_2_type" name="timeType2">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput2">
                     <label for="timeValue2" data-i18n="time_HH_MM"></label>
@@ -444,46 +447,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer2-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer2_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME2"
-                        id="cfg_timer_2_use_min_time" />
-
-                      <label
-                        for="timer2_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_2_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME2" id="minTimeInput2">
+                      <label for="minTimeValue2" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_2_min_time_value"
                         name="minTimeValue2" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer2_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME2"
-                        id="cfg_timer_2_use_max_time" />
-
-                      <label
-                        for="timer2_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_2_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME2" id="maxTimeInput2">
+                      <label for="maxTimeValue2" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_2_max_time_value"
                         name="maxTimeValue2" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning2"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <div
                     class="time-input"
@@ -592,7 +585,7 @@
           </article>
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 4</div>
+              <div class="dash-header" data-i18n="schedule_4"></div>
               <div class="section-header">
                 <label for="timer3_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -607,16 +600,25 @@
               <br />
               <form id="timerForm3" class="OPT_TIMER3">
                 <fieldset>
-                  <label for="timeType3" data-i18n="timer_type"></label>
+                  <label for="scheduleMode3" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_3_type"
-                    name="timeType3"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_3_mode"
+                    name="scheduleMode3"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput3" style="display: none">
+                    <label for="timeType3" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_3_type" name="timeType3">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput3">
                     <label for="timeValue3" data-i18n="time_HH_MM"></label>
@@ -628,46 +630,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer3-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer3_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME3"
-                        id="cfg_timer_3_use_min_time" />
-
-                      <label
-                        for="timer3_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_3_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME3" id="minTimeInput3">
+                      <label for="minTimeValue3" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_3_min_time_value"
                         name="minTimeValue3" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer3_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME3"
-                        id="cfg_timer_3_use_max_time" />
-
-                      <label
-                        for="timer3_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_3_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME3" id="maxTimeInput3">
+                      <label for="maxTimeValue3" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_3_max_time_value"
                         name="maxTimeValue3" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning3"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <div
                     class="time-input"
@@ -776,7 +768,7 @@
           </article>
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 5</div>
+              <div class="dash-header" data-i18n="schedule_5"></div>
               <div class="section-header">
                 <label for="timer4_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -791,16 +783,25 @@
               <br />
               <form id="timerForm4" class="OPT_TIMER4">
                 <fieldset>
-                  <label for="timeType4" data-i18n="timer_type"></label>
+                  <label for="scheduleMode4" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_4_type"
-                    name="timeType4"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_4_mode"
+                    name="scheduleMode4"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput4" style="display: none">
+                    <label for="timeType4" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_4_type" name="timeType4">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput4">
                     <label for="timeValue4" data-i18n="time_HH_MM"></label>
@@ -812,46 +813,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer4-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer4_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME4"
-                        id="cfg_timer_4_use_min_time" />
-
-                      <label
-                        for="timer4_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_4_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME4" id="minTimeInput4">
+                      <label for="minTimeValue4" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_4_min_time_value"
                         name="minTimeValue4" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer4_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME4"
-                        id="cfg_timer_4_use_max_time" />
-
-                      <label
-                        for="timer4_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_4_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME4" id="maxTimeInput4">
+                      <label for="maxTimeValue4" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_4_max_time_value"
                         name="maxTimeValue4" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning4"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <div
                     class="time-input"
@@ -960,7 +951,7 @@
           </article>
           <article>
             <div class="dash-main">
-              <div class="dash-header">Timer 6</div>
+              <div class="dash-header" data-i18n="schedule_6"></div>
               <div class="section-header">
                 <label for="timer5_enable" data-i18n="activate"></label>
                 <div class="switch-container">
@@ -975,16 +966,25 @@
               <br />
               <form id="timerForm5" class="OPT_TIMER5">
                 <fieldset>
-                  <label for="timeType5" data-i18n="timer_type"></label>
+                  <label for="scheduleMode5" data-i18n="schedule_mode"></label>
                   <select
-                    id="cfg_timer_5_type"
-                    name="timeType5"
-                    data-toggle="timeInputs"
-                    onchange="toggleTimeInputs(this)">
-                    <option value="0" data-i18n="time"></option>
-                    <option value="1" data-i18n="sunrise"></option>
-                    <option value="2" data-i18n="sundown"></option>
+                    id="cfg_timer_5_mode"
+                    name="scheduleMode5"
+                    onchange="toggleScheduleInputs(this)">
+                    <option value="0" data-i18n="mode_fixed"></option>
+                    <option value="1" data-i18n="mode_astro"></option>
+                    <option value="2" data-i18n="mode_later"></option>
+                    <option value="3" data-i18n="mode_earlier"></option>
                   </select>
+
+                  <div id="astroInput5" style="display: none">
+                    <label for="timeType5" data-i18n="astro_trigger"></label>
+                    <select id="cfg_timer_5_type" name="timeType5">
+                      <option value="0" hidden></option>
+                      <option value="1" data-i18n="sunrise"></option>
+                      <option value="2" data-i18n="sundown"></option>
+                    </select>
+                  </div>
 
                   <div class="time-input" id="timeInput5">
                     <label for="timeValue5" data-i18n="time_HH_MM"></label>
@@ -996,46 +996,36 @@
 
                   <!-- min/max time settings for sunrise/sundown -->
                   <div id="timer5-minmaxtime-settings" style="display: none">
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer5_use_min_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MINTIME5"
-                        id="cfg_timer_5_use_min_time" />
-
-                      <label
-                        for="timer5_use_min_time"
-                        data-i18n="use_min_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_5_use_min_time"
+                      hidden />
 
                     <div class="time-input OPT_MINTIME5" id="minTimeInput5">
+                      <label for="minTimeValue5" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_5_min_time_value"
                         name="minTimeValue5" />
                     </div>
 
-                    <div class="minmaxtime-switch">
-                      <input
-                        name="timer5_use_max_time"
-                        type="checkbox"
-                        role="switch"
-                        hideOpt="OPT_MAXTIME5"
-                        id="cfg_timer_5_use_max_time" />
-
-                      <label
-                        for="timer5_use_max_time"
-                        data-i18n="use_max_time"></label>
-                    </div>
+                    <input
+                      type="checkbox"
+                      id="cfg_timer_5_use_max_time"
+                      hidden />
 
                     <div class="time-input OPT_MAXTIME5" id="maxTimeInput5">
+                      <label for="maxTimeValue5" data-i18n="comparison_time"></label>
                       <input
                         type="time"
                         id="cfg_timer_5_max_time_value"
                         name="maxTimeValue5" />
                     </div>
                   </div>
+                  <small
+                    id="legacyModeWarning5"
+                    data-i18n="legacy_schedule_mode"
+                    style="display: none"></small>
 
                   <div
                     class="time-input"

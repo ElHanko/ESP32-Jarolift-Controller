@@ -2,6 +2,7 @@
 #include <basics.h>
 #include <jarolift.h>
 #include <message.h>
+#include <timer.h>
 #include <webUI.h>
 #include <webUIupdates.h>
 
@@ -324,6 +325,7 @@ void webCallback(const char *elementId, const char *value) {
   // Timer 1-6
   for (int i = 0; i < 6; i++) {
     char enableId[32];
+    char modeId[32];
     char typeId[32];
     char timeValueId[32];
     char offsetValueId[32];
@@ -344,6 +346,7 @@ void webCallback(const char *elementId, const char *value) {
     char maxTimeValueId[32];
 
     snprintf(enableId, sizeof(enableId), "cfg_timer_%d_enable", i);
+    snprintf(modeId, sizeof(modeId), "cfg_timer_%d_mode", i);
     snprintf(typeId, sizeof(typeId), "cfg_timer_%d_type", i);
     snprintf(timeValueId, sizeof(timeValueId), "cfg_timer_%d_time_value", i);
     snprintf(offsetValueId, sizeof(offsetValueId), "cfg_timer_%d_offset_value", i);
@@ -365,6 +368,19 @@ void webCallback(const char *elementId, const char *value) {
 
     if (strcmp(elementId, enableId) == 0) {
       config.timer[i].enable = EspStrUtil::stringToBool(value);
+    } else if (strcmp(elementId, modeId) == 0) {
+      const int mode = atoi(value);
+      if (mode == 0) {
+        config.timer[i].type = TYPE_FIXED_TIME;
+        config.timer[i].use_min_time = false;
+        config.timer[i].use_max_time = false;
+      } else if (mode >= 1 && mode <= 3) {
+        if (config.timer[i].type != TYPE_SUNRISE && config.timer[i].type != TYPE_SUNDOWN) {
+          config.timer[i].type = TYPE_SUNRISE;
+        }
+        config.timer[i].use_min_time = mode == 2;
+        config.timer[i].use_max_time = mode == 3;
+      }
     } else if (strcmp(elementId, typeId) == 0) {
       config.timer[i].type = atoi(value);
     } else if (strcmp(elementId, timeValueId) == 0) {

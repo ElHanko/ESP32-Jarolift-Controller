@@ -115,53 +115,80 @@ async function loadSimulatedData() {
 }
 
 function updateUIcallbackSelect(elementId, value) {
-  const element = document.getElementById(elementId);
-  if (element) {
-    // Rufe toggleTimeInputs nur auf, wenn data-toggle="timeInputs" gesetzt ist
-    if (element.dataset.toggle === "timeInputs") {
-      toggleTimeInputs(element);
-      toggleTimeInputsMinMax(element);
-    }
+  const match = elementId.match(/^cfg_timer_(\d+)_type$/);
+  if (match) {
+    // The flags and comparison values are loaded after type in config.json.
+    setTimeout(() => loadScheduleMode(match[1]), 0);
   }
 }
 
-function toggleTimeInputsMinMax(selectElement) {
-
-  const matches = selectElement.id.match(/\d+/g);
-  const timerId = matches[matches.length - 1];
-  const minMaxTimeSettings = document.getElementById(
-    `timer${timerId}-minmaxtime-settings`
+function loadScheduleMode(timerId) {
+  const mode = document.getElementById(`cfg_timer_${timerId}_mode`);
+  const type = document.getElementById(`cfg_timer_${timerId}_type`);
+  const useMinTime = document.getElementById(
+    `cfg_timer_${timerId}_use_min_time`
+  );
+  const useMaxTime = document.getElementById(
+    `cfg_timer_${timerId}_use_max_time`
   );
 
-  //  value: 0 == hide
-  if (selectElement.value === "0") {
-    minMaxTimeSettings.style.display = "none";
+  const legacyMode =
+    type.value !== "0" && useMinTime.checked && useMaxTime.checked;
+
+  if (type.value === "0") {
+    mode.value = "0";
+  } else if (legacyMode) {
+    mode.value = "";
+  } else if (useMinTime.checked) {
+    mode.value = "2";
+  } else if (useMaxTime.checked) {
+    mode.value = "3";
+  } else {
+    mode.value = "1";
   }
-  // otherwise show
-  else {
-    minMaxTimeSettings.style.display = "block";
-  }
+
+  updateScheduleInputVisibility(timerId, legacyMode);
 }
 
-function toggleTimeInputs(selectElement) {
-  
-  toggleTimeInputsMinMax(selectElement);
-  
-  const matches = selectElement.id.match(/\d+/g);
-  const timerId = matches[matches.length - 1];
-  const timeInput = document.getElementById(`timeInput${timerId}`);
-  const offsetInput = document.getElementById(`offsetInput${timerId}`);
+function toggleScheduleInputs(selectElement) {
+  const timerId = selectElement.id.match(/^cfg_timer_(\d+)_mode$/)[1];
+  const type = document.getElementById(`cfg_timer_${timerId}_type`);
+  const useMinTime = document.getElementById(
+    `cfg_timer_${timerId}_use_min_time`
+  );
+  const useMaxTime = document.getElementById(
+    `cfg_timer_${timerId}_use_max_time`
+  );
 
-  if (!timeInput || !offsetInput) {
-    console.error("Eines der Elemente nicht gefunden!");
-    return;
+  if (selectElement.value !== "0" && type.value !== "1" && type.value !== "2") {
+    type.value = "1";
   }
-  //  value:0 == fixed Time
-  if (selectElement.value === "0") {
-    timeInput.style.display = "block";
-    offsetInput.style.display = "none";
-  } else {
-    timeInput.style.display = "none";
-    offsetInput.style.display = "block";
-  }
+
+  useMinTime.checked = selectElement.value === "2";
+  useMaxTime.checked = selectElement.value === "3";
+  updateScheduleInputVisibility(timerId, false);
+}
+
+function updateScheduleInputVisibility(timerId, legacyMode) {
+  const mode = document.getElementById(`cfg_timer_${timerId}_mode`).value;
+  const timeInput = document.getElementById(`timeInput${timerId}`);
+  const astroInput = document.getElementById(`astroInput${timerId}`);
+  const offsetInput = document.getElementById(`offsetInput${timerId}`);
+  const comparisonSettings = document.getElementById(
+    `timer${timerId}-minmaxtime-settings`
+  );
+  const minTimeInput = document.getElementById(`minTimeInput${timerId}`);
+  const maxTimeInput = document.getElementById(`maxTimeInput${timerId}`);
+  const legacyWarning = document.getElementById(`legacyModeWarning${timerId}`);
+
+  const showAstro = mode === "1" || mode === "2" || mode === "3" || legacyMode;
+  const showComparison = mode === "2" || mode === "3";
+
+  timeInput.style.display = mode === "0" ? "block" : "none";
+  astroInput.style.display = showAstro ? "block" : "none";
+  offsetInput.style.display = showAstro ? "block" : "none";
+  comparisonSettings.style.display = showComparison ? "block" : "none";
+  minTimeInput.style.display = mode === "2" ? "block" : "none";
+  maxTimeInput.style.display = mode === "3" ? "block" : "none";
+  legacyWarning.style.display = legacyMode ? "block" : "none";
 }

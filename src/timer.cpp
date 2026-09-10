@@ -106,6 +106,12 @@ void getSunriseOrSunset(uint8_t type, int16_t offset, float latitude, float long
     return;
   }
 
+  if (timeInMinutes < 0) {
+    hour = UINT8_MAX;
+    minute = UINT8_MAX;
+    return;
+  }
+
   // add offset
   timeInMinutes += offset;
 
@@ -167,26 +173,38 @@ bool checkTimerTrigger(const s_cfg_timer &timer, uint8_t currentHour, uint8_t cu
     uint8_t eventHour, eventMinute;
     getSunriseOrSunset(timer.type, timer.offset_value, config.geo.latitude, config.geo.longitude, eventHour, eventMinute);
 
+    if (eventHour == UINT8_MAX || eventMinute == UINT8_MAX) {
+      return false;
+    }
+
     // Check min/max time ranges:
     if (timer.use_min_time) {
-      uint8_t minHour = getHour(timer.min_time_value);
-      uint8_t minMinute = getMinute(timer.min_time_value);
-      if (minHour >= 0) {
-        eventHour = max(eventHour, minHour);
-      }
-      if (eventHour == minHour) {
-        eventMinute = max(eventMinute, minMinute);
+      int minHour = getHour(timer.min_time_value);
+      int minMinute = getMinute(timer.min_time_value);
+
+      if (minHour >= 0 && minMinute >= 0) {
+        int eventTime = eventHour * 60 + eventMinute;
+        int minTime = minHour * 60 + minMinute;
+
+        if (eventTime < minTime) {
+          eventHour = minHour;
+          eventMinute = minMinute;
+        }
       }
     }
 
     if (timer.use_max_time) {
-      uint8_t maxHour = getHour(timer.max_time_value);
-      uint8_t maxMinute = getMinute(timer.max_time_value);
-      if (maxHour >= 0) {
-        eventHour = min(eventHour, maxHour);
-      }
-      if (eventHour == maxHour) {
-        eventMinute = min(eventMinute, maxMinute);
+      int maxHour = getHour(timer.max_time_value);
+      int maxMinute = getMinute(timer.max_time_value);
+
+      if (maxHour >= 0 && maxMinute >= 0) {
+        int eventTime = eventHour * 60 + eventMinute;
+        int maxTime = maxHour * 60 + maxMinute;
+
+        if (eventTime > maxTime) {
+          eventHour = maxHour;
+          eventMinute = maxMinute;
+        }
       }
     }
 

@@ -3,8 +3,32 @@
 // --------------------------------------
 const user_translations = {
   timer: {
-    de: "Timer",
-    en: "Timer",
+    de: "Zeitprogramme",
+    en: "Schedules",
+  },
+  schedule_1: {
+    de: "Zeitprogramm 1",
+    en: "Schedule 1",
+  },
+  schedule_2: {
+    de: "Zeitprogramm 2",
+    en: "Schedule 2",
+  },
+  schedule_3: {
+    de: "Zeitprogramm 3",
+    en: "Schedule 3",
+  },
+  schedule_4: {
+    de: "Zeitprogramm 4",
+    en: "Schedule 4",
+  },
+  schedule_5: {
+    de: "Zeitprogramm 5",
+    en: "Schedule 5",
+  },
+  schedule_6: {
+    de: "Zeitprogramm 6",
+    en: "Schedule 6",
   },
   led_setup: {
     de: "LED-Setup-Mode",
@@ -92,11 +116,11 @@ const user_translations = {
   },
   sunrise: {
     de: "Sonnenaufgang",
-    en: "sunrise",
+    en: "Sunrise",
   },
   sundown: {
     de: "Sonnenuntergang",
-    en: "sundown",
+    en: "Sunset",
   },
   cmd_up: {
     de: "Hochfahren",
@@ -110,29 +134,49 @@ const user_translations = {
     de: "Schatten",
     en: "shade",
   },
-  timer_type: {
-    de: "Zeitgeber",
-    en: "Time-Source",
+  schedule_mode: {
+    de: "Modus",
+    en: "Mode",
+  },
+  mode_fixed: {
+    de: "Zeitpunkt",
+    en: "Fixed time",
+  },
+  mode_astro: {
+    de: "Astro",
+    en: "Astro",
+  },
+  mode_later: {
+    de: "Späterer Zeitpunkt",
+    en: "Later time",
+  },
+  mode_earlier: {
+    de: "Früherer Zeitpunkt",
+    en: "Earlier time",
+  },
+  astro_trigger: {
+    de: "Astro-Auslöser",
+    en: "Astro trigger",
+  },
+  comparison_time: {
+    de: "Vergleichszeit",
+    en: "Comparison time",
+  },
+  legacy_schedule_mode: {
+    de: "Diese bestehende Konfiguration verwendet gleichzeitig beide alten Zeitgrenzen. Sie bleibt unverändert, bis ein Modus gewählt wird.",
+    en: "This existing configuration uses both legacy time limits. It remains unchanged until a mode is selected.",
   },
   time: {
     de: "Uhrzeit",
     en: "Time",
   },
   time_HH_MM: {
-    de: "Zeit (HH:MM)",
-    en: "Time (HH:MM)",
-  },
-  use_min_time: {
-    de: "Frühestens um (HH:MM)",
-    en: "Not earlier than (HH:MM)",
-  },
-  use_max_time: {
-    de: "Spätestes um (HH:MM)",
-    en: "Not later than (HH:MM)",
+    de: "Uhrzeit",
+    en: "Time",
   },
   offset_desc: {
-    de: "Offset in Minuten (z. B. -15 oder +20)",
-    en: "Offset in Minutens (e.g. -15 oder +20)",
+    de: "Offset in Minuten",
+    en: "Offset in minutes",
   },
   command: {
     de: "Befehl",
@@ -175,8 +219,8 @@ const user_translations = {
     en: "Geographical location",
   },
   geo_info: {
-    de: "Wird benötigt für die Timer Funktion mit Sonnenaufgang und Sonnenuntergang",
-    en: "Required for the timer function with sunrise and sunset",
+    de: "Wird für Zeitprogramme mit Sonnenaufgang und Sonnenuntergang benötigt",
+    en: "Required for schedules using sunrise and sunset",
   },
   latitude: {
     de: "Breitengrad",
