@@ -31,26 +31,170 @@
     <main class="container">
       <!--SECTION-START-->
       <div id="tab13" class="tab-content">
-        <div class="grid" style="max-width: 800px">
+        <div class="grid" style="max-width: 1000px">
           <div>
-            <h4 data-i18n="gpio"></h2>
+            <h4 data-i18n="channels"></h4>
+            <p data-i18n="help_channels"></p>
+            <p data-i18n="help_groups"></p>
+
+            <hr />
+
+            <h4 data-i18n="service"></h4>
+            <p data-i18n="help_learn"></p>
+            <p data-i18n="help_service"></p>
+
+            <hr />
+
+            <h4 data-i18n="timer"></h4>
+            <p data-i18n="help_schedules"></p>
+            <ul>
+              <li data-i18n="help_schedule_fixed"></li>
+              <li data-i18n="help_schedule_astro"></li>
+              <li data-i18n="help_schedule_later"></li>
+              <li data-i18n="help_schedule_earlier"></li>
+            </ul>
+            <p data-i18n="help_schedule_legacy"></p>
+
+            <hr />
+
+            <h4 data-i18n="mqtt"></h4>
+            <p data-i18n="help_mqtt_intro"></p>
+            <h6 data-i18n="help_mqtt_commands"></h6>
+            <table>
+              <tr>
+                <th data-i18n="command"></th>
+                <th data-i18n="topic"></th>
+                <th>Payload</th>
+              </tr>
+              <tbody>
+                <tr>
+                  <td data-i18n="shutter"></td>
+                  <td><code>&lt;base&gt;/cmd/shutter/1…16</code></td>
+                  <td><code>UP | OPEN | 0</code><br /><code>DOWN | CLOSE | 1</code><br /><code>STOP | 2</code><br /><code>SHADE | 3</code><br /><code>SETSHADE | 4</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="group"></td>
+                  <td><code>&lt;base&gt;/cmd/group/1…6</code></td>
+                  <td><code>UP | OPEN | 0</code><br /><code>DOWN | CLOSE | 1</code><br /><code>STOP | 2</code><br /><code>SHADE | 3</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="help_direct_mask"></td>
+                  <td><code>&lt;base&gt;/cmd/group/up</code><br /><code>&lt;base&gt;/cmd/group/down</code><br /><code>&lt;base&gt;/cmd/group/stop</code><br /><code>&lt;base&gt;/cmd/group/shade</code></td>
+                  <td><code>0b0000000000010101 | 0x15 | 21</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="timer"></td>
+                  <td><code>&lt;base&gt;/setvalue/schedule/1…6/enable</code></td>
+                  <td><code>true | false</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="restart"></td>
+                  <td><code>&lt;base&gt;/cmd/restart</code></td>
+                  <td data-i18n="help_any_payload"></td>
+                </tr>
+                <tr>
+                  <td data-i18n="help_reconfigure"></td>
+                  <td><code>&lt;base&gt;/cmd/reconfigure</code></td>
+                  <td data-i18n="help_any_payload"></td>
+                </tr>
+              </tbody>
+            </table>
+            <p data-i18n="grp_mask_help"></p>
+
+            <h6 data-i18n="help_mqtt_status"></h6>
+            <table>
+              <tr>
+                <th data-i18n="state"></th>
+                <th data-i18n="topic"></th>
+                <th>Payload</th>
+              </tr>
+              <tbody>
+                <tr>
+                  <td data-i18n="help_availability"></td>
+                  <td><code>&lt;base&gt;/status</code></td>
+                  <td><code>online | offline</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="shutter"></td>
+                  <td><code>&lt;base&gt;/status/shutter/1…16</code></td>
+                  <td><code>0 | 90 | 100</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="remote"></td>
+                  <td><code>&lt;base&gt;/status/remote/&lt;serial&gt;</code></td>
+                  <td><code>{"name", "cmd", "chBin", "chDec"}</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="timer"></td>
+                  <td><code>&lt;base&gt;/status/schedule/1…6/enable</code></td>
+                  <td><code>true | false</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="help_diagnostics"></td>
+                  <td><code>&lt;base&gt;/wifi</code><br /><code>&lt;base&gt;/eth</code><br /><code>&lt;base&gt;/sysinfo</code></td>
+                  <td>JSON</td>
+                </tr>
+                <tr>
+                  <td data-i18n="help_errors"></td>
+                  <td><code>&lt;base&gt;/message</code></td>
+                  <td data-i18n="help_error_text"></td>
+                </tr>
+              </tbody>
+            </table>
+            <p data-i18n="help_mqtt_states"></p>
+            <p data-i18n="help_home_assistant"></p>
+
+            <hr />
+
+            <h4 data-i18n="remotes"></h4>
+            <p data-i18n="help_remotes"></p>
+            <p data-i18n="help_remote_mqtt"></p>
+
+            <hr />
+
+            <h4 data-i18n="help_network"></h4>
+            <p data-i18n="help_network_settings"></p>
+            <p data-i18n="help_setup_mode"></p>
+            <p data-i18n="help_authentication"></p>
+
+            <hr />
+
+            <h4 data-i18n="config_mgn"></h4>
+            <p data-i18n="help_config"></p>
+            <p data-i18n="help_config_upload"></p>
+
+            <hr />
+
+            <h4 data-i18n="ota"></h4>
+            <p data-i18n="help_ota"></p>
+            <p data-i18n="help_version_dialog"></p>
+
+            <hr />
+
+            <h4 data-i18n="help_system_logging"></h4>
+            <p data-i18n="help_system"></p>
+            <p data-i18n="help_logging"></p>
+
+            <hr />
+
+            <h4 data-i18n="gpio"></h4>
             <h6 data-i18n="gpio_info"></h6>
-              <table>
+            <table>
               <tr>
                 <th>Signal</th>
                 <th>GPIO</th>
               </tr>
               <tbody>
                 <tr>
-                  <td>GD0</td>
+                  <td>GDO0</td>
                   <td>21</td>
                 </tr>
                 <tr>
-                  <td>GD2</td>
+                  <td>GDO2</td>
                   <td>22</td>
                 </tr>
                 <tr>
-                  <td>CLK</td>
+                  <td>SCK</td>
                   <td>18</td>
                 </tr>
                 <tr>
@@ -72,132 +216,6 @@
               <div class="info-text" data-i18n="gpio_restart_info"></div>
             </div>
           </div>
-        </div>
-        <hr />
-        <!--GPIO-END-->
-        <div class="grid" style="max-width: 800px">
-          <div>
-            <h4 data-i18n="mqtt"></h4>
-            <h6 data-i18n="general"></h6>
-            <table>
-              <tr>
-                <th>Command</th>
-                <th>Topic</th>
-                <th>Payload</th>
-              </tr>
-              <tbody>
-                <tr>
-                  <td>Restart ESP</td>
-                  <td>../cmd/restart</td>
-                  <td>none</td>
-                </tr>
-              </tbody>
-            </table>
-            <h6 data-i18n="shutter"></h6>
-            <table>
-              <tr>
-                <th>Command</th>
-                <th>Topic</th>
-                <th>Payload</th>
-              </tr>
-              <tbody>
-                <tr>
-                  <td>Restart ESP</td>
-                  <td>../cmd/restart</td>
-                  <td>none</td>
-                </tr>
-                <tr>
-                  <td>Shutter UP</td>
-                  <td>../cmd/shutter/1 ... cmd/shutter/16</td>
-                  <td>{UP, OPEN, 0}</td>
-                </tr>
-                <tr>
-                  <td>Shutter DOWN</td>
-                  <td>../cmd/shutter/1 ... cmd/shutter/16</td>
-                  <td>{DOWN, CLOSE, 1}</td>
-                </tr>
-                <tr>
-                  <td>Shutter STOP</td>
-                  <td>../cmd/shutter/1 ... cmd/shutter/16</td>
-                  <td>{STOP, 2}</td>
-                </tr>
-                <tr>
-                  <td>Shutter SHADE</td>
-                  <td>../cmd/shutter/1 ... cmd/shutter/16</td>
-                  <td>{SHADE, 3}</td>
-                </tr>
-              </tbody>
-            </table>
-            <h6 data-i18n="groups"></h6>
-            <table>
-              <tr>
-                <th>Command</th>
-                <th>Topic</th>
-                <th>Payload</th>
-              </tr>
-              <tbody>
-                <tr>
-                  <td>Group UP</td>
-                  <td>../cmd/group/1 ... cmd/shutter/6</td>
-                  <td>{UP, OPEN, 0}</td>
-                </tr>
-                <tr>
-                  <td>Group DOWN</td>
-                  <td>../cmd/group/1 ... cmd/shutter/6</td>
-                  <td>{DOWN, CLOSE, 1}</td>
-                </tr>
-                <tr>
-                  <td>Group STOP</td>
-                  <td>../cmd/group/1 ... cmd/shutter/6</td>
-                  <td>{STOP, 2}</td>
-                </tr>
-                <tr>
-                  <td>Group SHADE</td>
-                  <td>../cmd/group/1 ... cmd/shutter/6</td>
-                  <td>{SHADE, 3}</td>
-                </tr>
-              </tbody>
-            </table>
-            <h6 data-i18n="group$ $mask"></h6>
-            <div data-i18n="grp_mask_help"></div><br>
-            <code> Binary: 0b0000000000010101</code><br>
-            <code> Hex: 0x15</code><br>
-            <code> Decimal: 21</code><br><br>
-            
-            <table>
-              <tr>
-                <th>Command</th>
-                <th>Topic</th>
-                <th>Payload</th>
-              </tr>
-              <tbody>
-                <tr>
-                  <td>Group UP</td>
-                  <td>../cmd/group/up</td>
-                  <td>{0b0000000000010101, 0x15, 21}</td>
-                </tr>
-                <tr>
-                  <td>Group DOWN</td>
-                  <td>../cmd/group/down</td>
-                  <td>{0b0000000000010101, 0x15, 21}</td>
-                </tr>
-                <tr>
-                  <td>Group STOP</td>
-                  <td>../cmd/group/stop</td>
-                  <td>{0b0000000000010101, 0x15, 21}</td>
-                </tr>
-                <tr>
-                  <td>Group SHADE</td>
-                  <td>../cmd/group/shade</td>
-                  <td>{0b0000000000010101, 0x15, 21}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="info-box">
-              <div class="info-icon">&#9432;</div>
-              <div class="info-text" data-i18n="mqtt_info2"></div>
-            </div>
         </div>
       </div>
       <!--SECTION-END-->

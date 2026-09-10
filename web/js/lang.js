@@ -52,15 +52,11 @@ const user_translations = {
   },
   gpio_restart_info: {
     de: "Änderungen an den GPIO Einstellungen benötigen einen Neustart!",
-    en: "Changes to GPIO or Jarolift settings require a restart!",
+    en: "Changes to GPIO settings require a restart!",
   },
   gpio_info: {
     de: "Beispiel für einen typischen ESP32",
     en: "example for typical ESP32",
-  },
-  mqtt_info2: {
-    de: "< ../ > ist der Platzhalter für das MQTT Topic welches in den Einstellungen vorgegeben wird.",
-    en: "< ../ > is the placeholder for the MQTT topic which is specified in the settings.",
   },
   groups: {
     de: "Gruppen",
@@ -93,10 +89,6 @@ const user_translations = {
   bitmask_wizard: {
     de: "Auswahl Assistent",
     en: "Selection Wizard",
-  },
-  general: {
-    de: "Allgemein",
-    en: "General",
   },
   sunrise: {
     de: "Sonnenaufgang",
@@ -249,5 +241,145 @@ const user_translations = {
   unlearn: {
     de: "ablernen",
     en: "unlearn",
+  },
+  help_channels: {
+    de: "Unter Kanäle werden die bis zu 16 aktivierten Rollläden mit ihren konfigurierten Namen angezeigt. Jeder Kanal kann mit UP, DOWN, STOP und SHADE gesteuert werden. Name und Sichtbarkeit werden unter Einstellungen > Rollladen festgelegt.",
+    en: "The Channels page shows up to 16 enabled shutters with their configured names. Each channel can be controlled with UP, DOWN, STOP and SHADE. Its name and visibility are configured under Settings > Shutter.",
+  },
+  help_groups: {
+    de: "Bis zu sechs aktivierte Gruppen stehen mit denselben vier Befehlen zur Verfügung. Die Bitmaske einer Gruppe wählt die zugehörigen Kanäle aus; das niederwertigste Bit rechts steht für Kanal 1.",
+    en: "Up to six enabled groups provide the same four commands. A group's bitmask selects its channels; the least significant bit on the right represents channel 1.",
+  },
+  help_learn: {
+    de: "Unter Einstellungen > Rollladen kann jeder Kanal einzeln angelernt oder abgelernt werden. Der Anlernmodus in den JAROLIFT-Einstellungen wählt zwischen dem neuen und dem alten Anlernverfahren.",
+    en: "Under Settings > Shutter, each channel can be learned or unlearned individually. The learn mode in the JAROLIFT settings selects the new or legacy learning procedure.",
+  },
+  help_service: {
+    de: "Die Service-Seite bietet für den ausgewählten aktivierten Kanal UP, DOWN, STOP und SHADE sowie Set Shade und das Setzen oder Löschen der oberen und unteren Endlage.",
+    en: "For the selected enabled channel, the Service page provides UP, DOWN, STOP and SHADE, plus Set Shade and setting or deleting the upper and lower end points.",
+  },
+  help_schedules: {
+    de: "Es gibt sechs einzeln aktivierbare Zeitprogramme. Jedes besitzt Wochentage, einen Befehl (UP, DOWN oder SHADE) und eine Bitmaske zur Auswahl der Kanäle.",
+    en: "There are six schedules that can be enabled individually. Each has weekdays, a command (UP, DOWN or SHADE), and a bitmask selecting the channels.",
+  },
+  help_schedule_fixed: {
+    de: "Zeitpunkt: Ausführung zu einer festen Uhrzeit.",
+    en: "Fixed time: runs at a configured time.",
+  },
+  help_schedule_astro: {
+    de: "Astro: Ausführung bei Sonnenaufgang oder Sonnenuntergang mit einem Offset in Minuten. Dafür werden NTP-Zeit und die geografische Lage benötigt.",
+    en: "Astro: runs at sunrise or sunset with an offset in minutes. This requires NTP time and the geographical location.",
+  },
+  help_schedule_later: {
+    de: "Späterer Zeitpunkt: verwendet den späteren Wert aus Astro-Zeit und Vergleichszeit.",
+    en: "Later time: uses the later value of the Astro time and comparison time.",
+  },
+  help_schedule_earlier: {
+    de: "Früherer Zeitpunkt: verwendet den früheren Wert aus Astro-Zeit und Vergleichszeit.",
+    en: "Earlier time: uses the earlier value of the Astro time and comparison time.",
+  },
+  help_schedule_legacy: {
+    de: "Bestehende Konfigurationen mit gleichzeitig gesetzter frühester und spätester Zeit bleiben unverändert aktiv. Die WebUI zeigt dafür einen Hinweis, bis ein neuer Modus gewählt wird.",
+    en: "Existing configurations with both earliest and latest time enabled remain active unchanged. The WebUI shows a notice until a new mode is selected.",
+  },
+  help_mqtt_intro: {
+    de: "<base> steht für das unter Einstellungen konfigurierte MQTT-Basistopic. Topic-Namen sind nicht von der Sprache der WebUI abhängig.",
+    en: "<base> represents the MQTT base topic configured under Settings. Topic names do not depend on the WebUI language.",
+  },
+  help_mqtt_commands: {
+    de: "Befehle",
+    en: "Commands",
+  },
+  help_direct_mask: {
+    de: "Direkte Bitmaske",
+    en: "Direct bitmask",
+  },
+  help_any_payload: {
+    de: "beliebig",
+    en: "any",
+  },
+  help_reconfigure: {
+    de: "Home Assistant neu konfigurieren",
+    en: "Reconfigure Home Assistant",
+  },
+  help_mqtt_status: {
+    de: "Status",
+    en: "Status",
+  },
+  help_availability: {
+    de: "Verfügbarkeit",
+    en: "Availability",
+  },
+  help_diagnostics: {
+    de: "Netzwerk/System",
+    en: "Network/system",
+  },
+  help_errors: {
+    de: "Fehlermeldungen",
+    en: "Error messages",
+  },
+  help_error_text: {
+    de: "Text",
+    en: "Text",
+  },
+  help_mqtt_states: {
+    de: "Die Rollladen-Statuswerte sind die intern erwarteten Positionen: 0 für offen, 90 für Schatten und 100 für geschlossen. Die Aktivierungszustände aller sechs Zeitprogramme werden beim MQTT-Verbindungsaufbau und nach einer Änderung als retained true oder false veröffentlicht.",
+    en: "Shutter status values are the internally expected positions: 0 for open, 90 for shade and 100 for closed. The enabled state of all six schedules is published as retained true or false when MQTT connects and after a change.",
+  },
+  help_home_assistant: {
+    de: "Wenn Home Assistant aktiviert ist, werden Discovery-Einträge für aktivierte Kanäle und Gruppen, Neustart/Neukonfiguration sowie Netzwerk- und Systemsensoren veröffentlicht. Die Zeitprogramm-Aktivierung steht über die oben genannten MQTT-Topics zur Verfügung.",
+    en: "When Home Assistant is enabled, discovery entries are published for enabled channels and groups, restart/reconfigure actions, and network and system sensors. Schedule enable control is available through the MQTT topics shown above.",
+  },
+  help_remotes: {
+    de: "Empfangene Originalfernbedienungen können unter Einstellungen > Fernbedienungen mit Name, sechsstelliger Seriennummer und Kanal-Bitmaske zugeordnet und einzeln aktiviert werden. Bei passenden aktivierten Einträgen aktualisieren UP, DOWN und SHADE auch die erwarteten Kanalpositionen.",
+    en: "Received original remotes can be assigned under Settings > Remotes using a name, six-digit serial number and channel bitmask, and enabled individually. For matching enabled entries, UP, DOWN and SHADE also update the expected channel positions.",
+  },
+  help_remote_mqtt: {
+    de: "Jedes empfangene Signal wird unter <base>/status/remote/<serial> als JSON mit name, cmd, chBin und chDec veröffentlicht. chBin enthält die 16-Bit-Kanalauswahl in Binärform, chDec denselben Wert dezimal; unbekannte Fernbedienungen erhalten den Namen unknown.",
+    en: "Each received signal is published at <base>/status/remote/<serial> as JSON containing name, cmd, chBin and chDec. chBin contains the 16-bit channel selection in binary form and chDec the same value in decimal; unknown remotes use the name unknown.",
+  },
+  help_network: {
+    de: "Netzwerk und Zugriff",
+    en: "Network and access",
+  },
+  help_network_settings: {
+    de: "WLAN ist in einer neuen Konfiguration aktiviert und kann deaktiviert werden, wenn Ethernet verwendet wird. WLAN und W5500-Ethernet unterstützen DHCP oder eine statische IP-Konfiguration. Netzwerk- und GPIO-Änderungen werden nach einem Neustart wirksam.",
+    en: "WiFi is enabled in a new configuration and can be disabled when Ethernet is used. WiFi and W5500 Ethernet support DHCP or static IP configuration. Network and GPIO changes take effect after a restart.",
+  },
+  help_setup_mode: {
+    de: "Der Setup-Modus startet den Access Point ESP32-Jarolift unter 192.168.4.1. Er wird bei fehlender oder ungültiger Grundkonfiguration, ohne aktiviertes Netzwerk, ohne Zugangsdaten oder nach fünf schnellen Neustarts im 5-Sekunden-Fenster aktiviert.",
+    en: "Setup mode starts the ESP32-Jarolift access point at 192.168.4.1. It is activated for missing or invalid basic configuration, with no network enabled, without credentials, or after five quick restarts within the 5-second window.",
+  },
+  help_authentication: {
+    de: "Im normalen Betrieb schützen Benutzername und Passwort die WebUI, WebSocket-, Config- und OTA-Zugriffe. Es gibt keinen separaten Aktivierungsschalter; im Setup-Modus ist die Anmeldung deaktiviert.",
+    en: "In normal operation, username and password protect WebUI, WebSocket, configuration and OTA access. There is no separate enable switch; authentication is disabled in setup mode.",
+  },
+  help_config: {
+    de: "Unter Tools kann config.json angezeigt, heruntergeladen oder hochgeladen werden. Nach einem erfolgreichen Import wird die Konfiguration neu geladen; ein Neustart wendet alle abhängigen Einstellungen vollständig an.",
+    en: "Under Tools, config.json can be viewed, downloaded or uploaded. After a successful import the configuration is reloaded; a restart fully applies all dependent settings.",
+  },
+  help_config_upload: {
+    de: "Beim Upload ersetzt nur eine vollständige, syntaktisch gültige JSON-Datei die aktive Konfiguration. Ungültige, abgebrochene oder gleichzeitig gestartete Uploads werden abgelehnt, ohne die aktive Datei zu ersetzen.",
+    en: "During upload, only a complete, syntactically valid JSON file replaces the active configuration. Invalid, interrupted or concurrent uploads are rejected without replacing the active file.",
+  },
+  help_ota: {
+    de: "Unter Tools kann ein Firmware-Update manuell als .bin-Datei hochgeladen werden. Verwenden Sie das Anwendungs-/OTA-Abbild (esp32_jarolift_ota_<version>.bin, bei einem lokalen Build firmware.bin), nicht das zusammengeführte Flash-Abbild. Nach erfolgreichem Upload bestätigt die WebUI den Neustart.",
+    en: "Under Tools, a firmware update can be uploaded manually as a .bin file. Use the application/OTA image (esp32_jarolift_ota_<version>.bin, or firmware.bin from a local build), not the merged flash image. After a successful upload, the WebUI asks for restart confirmation.",
+  },
+  help_version_dialog: {
+    de: "Ein Klick auf die Versionsnummer zeigt nur die aktuell installierte Version an. Firmware-Updates werden manuell unter Tools gestartet.",
+    en: "Clicking the version number only shows the currently installed version. Firmware updates are started manually under Tools.",
+  },
+  help_system_logging: {
+    de: "Systeminformationen und Protokolle",
+    en: "System information and logs",
+  },
+  help_system: {
+    de: "Die System-Seite zeigt Netzwerk- und MQTT-Status, Software- und Buildinformationen, Laufzeit, Neustartgrund, Speicherbelegung, Chipdaten sowie aktuelle Zeit, Sonnenaufgang und Sonnenuntergang.",
+    en: "The System page shows network and MQTT status, software and build information, uptime, restart reason, memory usage, chip data, and the current time, sunrise and sunset.",
+  },
+  help_logging: {
+    de: "Die Protokollierung kann aktiviert oder deaktiviert werden. Die Protokolle können nach Richtung sortiert, aktualisiert und geleert werden. Verfügbar sind die Stufen Fehler, Warnung, Info und Debug.",
+    en: "Logging can be enabled or disabled. Logs can be sorted, refreshed and cleared. The available levels are Error, Warning, Info and Debug.",
   },
 };
