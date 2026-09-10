@@ -215,7 +215,7 @@ void configCyclic() {
  * *******************************************************************/
 void configInitValue() {
 
-  memset((void *)&config, 0, sizeof(config));
+  config = {};
 
   // Logger
   config.log.level = 4;
