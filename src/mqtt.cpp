@@ -90,7 +90,19 @@ const char *addCfgCmdTopic(const char *suffix) {
  * *******************************************************************/
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
 
-  s_MqttMessage msgCpy;
+  s_MqttMessage msgCpy{};
+
+  if (index != 0 || len != total) {
+    ESP_LOGW(TAG,
+             "fragmented MQTT payload ignored: index=%u len=%u total=%u",
+             index, len, total);
+    return;
+  }
+
+  if (len >= PAYLOAD_LEN) {
+    ESP_LOGW(TAG, "MQTT payload too large: %u bytes", len);
+    return;
+  }
 
   msgCpy.len = len;
 
