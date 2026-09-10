@@ -7,6 +7,13 @@
 #include <gzip_login_html.h>
 #include <gzip_ntp_html.h>
 
+namespace {
+AsyncWebServerRequest *activeConfigUploadRequest = nullptr;
+
+constexpr char CONFIG_UPLOAD_TEMP_FILENAME[] = "/config-upload.tmp";
+constexpr char CONFIG_UPLOAD_STATUS_ATTRIBUTE[] = "configUploadStatus";
+} // namespace
+
 // Generic function to handle gzip-compressed chunked responses with customizable chunk size
 void EspWebUI::sendGzipChunkedResponse(AsyncWebServerRequest *request, const uint8_t *content, size_t contentLength, const char *contentType,
                                     bool checkAuth, size_t chunkSize) {
@@ -159,40 +166,108 @@ void EspWebUI::setupRoutes() {
           request->send(401, "text/plain", "authentication required");
           return;
         }
-        request->send(200, "text/plain", "upload done!");
+
+        const long uploadStatus = request->getAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 500L);
+        if (uploadStatus == 200) {
+          request->send(200, "text/plain", "upload done!");
+        } else if (uploadStatus == 400) {
+          request->send(400, "text/plain", "invalid JSON!");
+        } else if (uploadStatus == 409) {
+          request->send(409, "text/plain", "config upload already in progress");
+        } else {
+          request->send(500, "text/plain", "upload failed!");
+        }
       },
       [this](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final) {
         if (!isAuthenticated(request)) {
           return;
         }
 
-        static File uploadFile;
-        const String targetFilename = "/config.json"; // fix to config.json
+        auto uploadError = [this, request](long httpStatus, const char *message) {
+          if (activeConfigUploadRequest == request) {
+            request->_tempFile.close();
+            LittleFS.remove(CONFIG_UPLOAD_TEMP_FILENAME);
+            activeConfigUploadRequest = nullptr;
+          }
 
-        if (!index) { // firs call for upload
+          request->setAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, httpStatus);
+          callbackUpload(UPLOAD_ERROR, message);
+          ESP_LOGE(TAG, "%s", message);
+        };
+
+        if (!index) { // first call for upload
+          if (activeConfigUploadRequest != nullptr && activeConfigUploadRequest != request) {
+            request->setAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 409L);
+            ESP_LOGW(TAG, "Config upload rejected: another upload is already active");
+            return;
+          }
+
+          activeConfigUploadRequest = request;
+          request->setAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 0L);
+
+          request->onDisconnect([this, request]() {
+            if (activeConfigUploadRequest == request) {
+              ESP_LOGW(TAG, "Config upload client disconnected");
+              request->_tempFile.close();
+              LittleFS.remove(CONFIG_UPLOAD_TEMP_FILENAME);
+              activeConfigUploadRequest = nullptr;
+              callbackUpload(UPLOAD_ERROR, "config upload aborted: client disconnected");
+            }
+          });
+
           callbackUpload(UPLOAD_BEGIN, "uploading...");
           ESP_LOGI(TAG, "Upload Start: %s\n", filename.c_str());
-          uploadFile = LittleFS.open(targetFilename, "w"); // fix to config.json
 
-          if (!uploadFile) {
-            callbackUpload(UPLOAD_ERROR, "error on file close!");
-            ESP_LOGE(TAG, "error on file close!");
+          LittleFS.remove(CONFIG_UPLOAD_TEMP_FILENAME);
+          request->_tempFile = LittleFS.open(CONFIG_UPLOAD_TEMP_FILENAME, "w");
+          if (!request->_tempFile) {
+            uploadError(500L, "error creating upload file!");
             return;
           }
         }
 
-        if (len) { // if there are still data to send...
-          uploadFile.write(data, len);
+        if (request->getAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 500L) != 0L) {
+          return;
+        }
+
+        if (activeConfigUploadRequest != request) {
+          request->setAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 409L);
+          ESP_LOGW(TAG, "Config upload rejected: request does not own upload session");
+          return;
+        }
+
+        if (len && request->_tempFile.write(data, len) != len) {
+          uploadError(500L, "error writing upload file!");
+          return;
         }
 
         if (final) {
-          if (uploadFile) {
-            uploadFile.close();
-            ESP_LOGI(TAG, "UploadEnd: %s, %u B\n", filename.c_str(), index + len);
-            callbackUpload(UPLOAD_FINISH, "upload done!");
-          } else {
-            callbackUpload(UPLOAD_ERROR, "error on file close!");
+          request->_tempFile.close();
+
+          File uploadedConfig = LittleFS.open(CONFIG_UPLOAD_TEMP_FILENAME, "r");
+          if (!uploadedConfig) {
+            uploadError(500L, "error reading upload file!");
+            return;
           }
+
+          JsonDocument doc;
+          DeserializationError error = deserializeJson(doc, uploadedConfig);
+          uploadedConfig.close();
+
+          if (error) {
+            uploadError(400L, "invalid JSON!");
+            return;
+          }
+
+          if (!LittleFS.rename(CONFIG_UPLOAD_TEMP_FILENAME, "/config.json")) {
+            uploadError(500L, "error replacing config file!");
+            return;
+          }
+
+          request->setAttribute(CONFIG_UPLOAD_STATUS_ATTRIBUTE, 200L);
+          ESP_LOGI(TAG, "UploadEnd: %s, %u B\n", filename.c_str(), index + len);
+          callbackUpload(UPLOAD_FINISH, "upload done!");
+          activeConfigUploadRequest = nullptr;
         }
       });
 
