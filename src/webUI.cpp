@@ -23,9 +23,17 @@ static bool webInitDone = false;
 static const size_t BUFFER_SIZE = 512;
 static bool onLoadRequest = false;
 
-static char webCallbackElementID[32];
-static char webCallbackValue[256];
-static bool webCallbackAvailable = false;
+struct WebCallbackEvent {
+  char elementID[32];
+  char value[256];
+};
+
+static constexpr size_t WEB_CALLBACK_QUEUE_SIZE = 8;
+static WebCallbackEvent webCallbackQueue[WEB_CALLBACK_QUEUE_SIZE];
+static size_t webCallbackQueueHead = 0;
+static size_t webCallbackQueueTail = 0;
+static size_t webCallbackQueueCount = 0;
+static portMUX_TYPE webCallbackQueueMux = portMUX_INITIALIZER_UNLOCKED;
 
 static auto &wdt = EspSysUtil::Wdt::getInstance();
 static auto &ota = EspSysUtil::OTA::getInstance();
@@ -82,11 +90,25 @@ void webUISetup() {
   // callback for reload
   webUI.setCallbackReload([]() { onLoadRequest = true; });
 
-  // callback for web elements - copy elementID and value and call webCallback in cyclic loop
+  // callback for web elements - queue elementID and value for processing in cyclic loop
   webUI.setCallbackWebElement([](const char *elementID, const char *elementValue) {
-    snprintf(webCallbackElementID, sizeof(webCallbackElementID), "%s", elementID);
-    snprintf(webCallbackValue, sizeof(webCallbackValue), "%s", elementValue);
-    webCallbackAvailable = true;
+    WebCallbackEvent event{};
+    snprintf(event.elementID, sizeof(event.elementID), "%s", elementID);
+    snprintf(event.value, sizeof(event.value), "%s", elementValue);
+
+    bool queued = false;
+    portENTER_CRITICAL(&webCallbackQueueMux);
+    if (webCallbackQueueCount < WEB_CALLBACK_QUEUE_SIZE) {
+      webCallbackQueue[webCallbackQueueTail] = event;
+      webCallbackQueueTail = (webCallbackQueueTail + 1) % WEB_CALLBACK_QUEUE_SIZE;
+      webCallbackQueueCount++;
+      queued = true;
+    }
+    portEXIT_CRITICAL(&webCallbackQueueMux);
+
+    if (!queued) {
+      ESP_LOGW(TAG, "Web callback queue full, dropping event: %s", event.elementID);
+    }
   });
 
   webUI.setCredentials(config.auth.user, config.auth.password);
@@ -115,10 +137,25 @@ void webUICyclic() {
   // handling of update webUI elements
   webUIupdates();
 
-  // handling of callback infomation
-  if (webCallbackAvailable) {
-    webCallback(webCallbackElementID, webCallbackValue);
-    webCallbackAvailable = false;
+  // handling of callback information
+  for (size_t processed = 0; processed < WEB_CALLBACK_QUEUE_SIZE; processed++) {
+    WebCallbackEvent event{};
+    bool eventAvailable = false;
+
+    portENTER_CRITICAL(&webCallbackQueueMux);
+    if (webCallbackQueueCount > 0) {
+      event = webCallbackQueue[webCallbackQueueHead];
+      webCallbackQueueHead = (webCallbackQueueHead + 1) % WEB_CALLBACK_QUEUE_SIZE;
+      webCallbackQueueCount--;
+      eventAvailable = true;
+    }
+    portEXIT_CRITICAL(&webCallbackQueueMux);
+
+    if (!eventAvailable) {
+      break;
+    }
+
+    webCallback(event.elementID, event.value);
   }
 
   webInitDone = true; // init done
