@@ -60,6 +60,27 @@ void mqttPublish(const char *topic, const char *payload, boolean retained) { mqt
 
 /**
  * *******************************************************************
+ * @brief   publish enable state of one schedule
+ * @param   schedule number 1..6
+ * @return  none
+ * *******************************************************************/
+static void mqttPublishScheduleEnable(uint8_t schedule) {
+
+  if (schedule < 1 || schedule > 6) {
+    return;
+  }
+
+  char suffix[48];
+  snprintf(suffix, sizeof(suffix), "/status/schedule/%u/enable", schedule);
+
+  mqttPublish(
+      addTopic(suffix),
+      config.timer[schedule - 1].enable ? "true" : "false",
+      true);
+}
+
+/**
+ * *******************************************************************
  * @brief   helper function to add subject to mqtt topic
  * @param   none
  * @return  none
@@ -139,6 +160,9 @@ void onMqttConnect(bool sessionPresent) {
   mqtt_client.subscribe(addTopic("/cmd/#"), 0);
   mqtt_client.subscribe(addTopic("/setvalue/#"), 0);
   mqtt_client.subscribe("homeassistant/status", 0);
+  for (uint8_t schedule = 1; schedule <= 6; schedule++) {
+    mqttPublishScheduleEnable(schedule);
+  }
 }
 
 /**
@@ -285,6 +309,34 @@ int checkJaroCmd(const char *topicCopy, const char *cmpTopic, int maxChannel) {
 
 /**
  * *******************************************************************
+ * @brief   check schedule enable command topic
+ * @param   topic
+ * @return  schedule number 1..6, otherwise -1
+ * *******************************************************************/
+static int checkScheduleEnableCmd(const char *topic) {
+
+  const char *baseTopic = addCfgCmdTopic("schedule/");
+  size_t baseTopicLen = strlen(baseTopic);
+
+  if (strncmp(topic, baseTopic, baseTopicLen) != 0) {
+    return -1;
+  }
+
+  const char *suffix = topic + baseTopicLen;
+
+  if (suffix[0] < '1' || suffix[0] > '6') {
+    return -1;
+  }
+
+  if (strcmp(suffix + 1, "/enable") != 0) {
+    return -1;
+  }
+
+  return suffix[0] - '0';
+}
+
+/**
+ * *******************************************************************
  * @brief  parseMask:
  * @details - Removes any whitespace characters
  *  - Converts everything to lowercase
@@ -349,9 +401,11 @@ void processMqttMessage() {
   int channel = checkJaroCmd(msgCpy.topic, shutterTopic, 16);
   const char *groupTopic = addTopic("/cmd/group/");
   int group = checkJaroCmd(msgCpy.topic, groupTopic, 6);
+  int schedule = checkScheduleEnableCmd(msgCpy.topic);
 
   ESP_LOGD(TAG, "channel: %i", channel);
   ESP_LOGD(TAG, "group: %i", group);
+  ESP_LOGD(TAG, "schedule: %i", schedule);
 
   // restart ESP command
   if (strcasecmp(msgCpy.topic, addTopic("/cmd/restart")) == 0) {
@@ -371,6 +425,35 @@ void processMqttMessage() {
   } else if (strcmp(msgCpy.topic, "homeassistant/status") == 0) {
     if (config.mqtt.ha_enable && strcmp(msgCpy.payload, "online") == 0) {
       mqttDiscoverySetup(false); // send actual discovery configuration
+    }
+    // schedule enable command
+  } else if (schedule != -1) {
+
+    bool enabled = false;
+    bool validPayload = true;
+
+    if (strcasecmp(msgCpy.payload, "true") == 0) {
+      enabled = true;
+    } else if (strcasecmp(msgCpy.payload, "false") == 0) {
+      enabled = false;
+    } else {
+      validPayload = false;
+    }
+
+    if (!validPayload) {
+      mqttPublish(addTopic("/message"), "invalid schedule enable value", false);
+      ESP_LOGW(TAG, "invalid schedule %i enable value: %s", schedule, msgCpy.payload);
+    } else {
+      if (config.timer[schedule - 1].enable != enabled) {
+        config.timer[schedule - 1].enable = enabled;
+
+        ESP_LOGI(TAG,
+                 "schedule %i %s",
+                 schedule,
+                 enabled ? "enabled" : "disabled");
+      }
+
+      mqttPublishScheduleEnable(schedule);
     }
     // Shutter commands
   } else if (channel != -1) {
