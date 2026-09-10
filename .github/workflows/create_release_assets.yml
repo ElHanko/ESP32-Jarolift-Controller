@@ -1,15 +1,17 @@
 name: Create Release
 
 # Erstellt ein Release bei einem Push mit Tag
-# Prüft ob die Version im Code und in der changeNew.md mit dem Tag übereinstimmen
-# liest die changeNew.md und nutzt diese als Beschreibung für das Release
-# upload aller Files aus ./release/ als Assets im Release
+# Prüft ob Tag, Version im Code und oberster Eintrag in der changelog.md übereinstimmen
+# nutzt den obersten Abschnitt der changelog.md als Beschreibung für das Release
+# baut die Firmware und lädt die aktuellen Release-Dateien als Assets hoch
 
 on:
-  workflow_dispatch: # Ermöglicht das manuelle Anstoßen des Workflows
   push:
     tags:
-      - 'v*.*.*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
 
 jobs:
   create_release:
@@ -40,33 +42,57 @@ jobs:
       - name: Check changelog header and prepare release notes
         id: check_changelog
         run: |
-          # Lese die erste Zeile der changeNew.md und vergleiche sie mit dem Tag
-          header=$(grep -m 1 . changeNew.md | sed 's/^# //')
-          echo "Changelog header: $header"
+          changelog_version=$(awk '/^#[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ { print $2; exit }' changelog.md)
+          echo "Changelog version: $changelog_version"
 
-          if [[ "$header" != "$VERSION" ]]; then
-            echo "Changelog header $header does not match the tag $VERSION"
+          if [[ -z "$changelog_version" ]]; then
+            echo "No release version header found in changelog.md"
             exit 1
           fi
 
-          # Entferne die erste Zeile und speichere den Rest in einer temporären Datei
-          tail -n +2 changeNew.md > release_notes.md
+          if [[ "$changelog_version" != "$VERSION" ]]; then
+            echo "Changelog version $changelog_version does not match project version $VERSION"
+            exit 1
+          fi
+
+          awk '
+            /^#[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$/ {
+              if (found) exit
+              found = 1
+            }
+            found && /^---[[:space:]]*$/ { exit }
+            found { print }
+          ' changelog.md > release_notes.md
+
+          if [[ ! -s release_notes.md ]]; then
+            echo "No release notes could be extracted from changelog.md"
+            exit 1
+          fi
         shell: bash
+
+      - name: Install PlatformIO
+        run: python -m pip install --disable-pip-version-check platformio==6.1.19
+
+      - name: Build release assets
+        run: pio run -e esp32
+
+      - name: Check release assets
+        run: |
+          test -f "release/esp32_jarolift_ota_${VERSION}.bin"
+          test -f "release/esp32_jarolift_flash_${VERSION}.bin"
 
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
-          # Erstelle die Release-Dateien-Variable
-          files=$(ls ./release/*)
-          
           # Erstelle das Release und lade die Assets hoch
-          gh release create "$tag" $files \
+          gh release create "$tag" \
+              "release/esp32_jarolift_ota_${VERSION}.bin" \
+              "release/esp32_jarolift_flash_${VERSION}.bin" \
               --repo="$GITHUB_REPOSITORY" \
               --title="${tag}" \
               -F release_notes.md
 
       - name: Clean up
         run: rm release_notes.md
-
