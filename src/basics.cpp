@@ -92,6 +92,10 @@ void onWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
  * *******************************************************************/
 void checkWiFi() {
 
+  if (!config.wifi.enable) {
+    return;
+  }
+
   // Ethernet is also not connected - so we need to establish WiFi
   if (wifiReconnectTimer.delayOnTrigger((!wifi.connected && !eth.connected), WIFI_RECONNECT)) {
     wifiReconnectTimer.delayReset();
@@ -132,6 +136,7 @@ void setupWiFi() {
 
     // setup callback function
     WiFi.onEvent(onWiFiStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
+    WiFi.onEvent(onWiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
     WiFi.onEvent(onWiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
     // manual IP-Settings
