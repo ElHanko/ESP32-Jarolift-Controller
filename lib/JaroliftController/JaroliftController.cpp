@@ -11,8 +11,8 @@ JaroliftController::JaroliftController()
   memset((void *)lowBuf_, 0, sizeof(lowBuf_));
   memset((void *)hiBuf_, 0, sizeof(hiBuf_));
 
-  uint8_t defaultDiscLow[16] = {0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-  uint8_t defaultDiscHigh[16] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80};
+  uint8_t defaultDiscLow[kChannelCount] = {0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+  uint8_t defaultDiscHigh[kChannelCount] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80};
   memcpy(discLowArr_, defaultDiscLow, sizeof(discLowArr_));
   memcpy(discHighArr_, defaultDiscHigh, sizeof(discHighArr_));
 
@@ -30,6 +30,15 @@ JaroliftController::~JaroliftController() { instance_ = nullptr; }
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // helper and setter functions
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+bool JaroliftController::isValidChannel(uint8_t channel) const {
+  if (channel < kChannelCount) {
+    return true;
+  }
+
+  ESP_LOGE(TAG, "invalid channel: %u (expected 0-%u)", static_cast<unsigned>(channel), static_cast<unsigned>(kChannelCount - 1));
+  return false;
+}
 
 /**
  *******************************************************************
@@ -385,6 +394,10 @@ void JaroliftController::handleRadioRxMeasure() {
   if (currentMicros - timeout > 3500) {
     pbWrite_ = 0;
   }
+  if (pbWrite_ >= kPulseBufferSize) {
+    pbWrite_ = 0;
+    return;
+  }
   if (pinState) { // Übergang zu HIGH
     lineUp = currentMicros;
     unsigned long lowVal = lineUp - lineDown;
@@ -424,7 +437,7 @@ void JaroliftController::handleRadioRxMeasure() {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
 
@@ -556,7 +569,7 @@ void JaroliftController::cmdGroup(commands cmd, uint16_t groupMask) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdLearn(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -590,7 +603,7 @@ void JaroliftController::cmdLearn(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdUnlearn(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -632,7 +645,7 @@ void JaroliftController::cmdUnlearn(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdSetEndPointUp(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -673,7 +686,7 @@ void JaroliftController::cmdSetEndPointUp(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdDeleteEndPointUp(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -714,7 +727,7 @@ void JaroliftController::cmdDeleteEndPointUp(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdSetEndPointDown(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -755,7 +768,7 @@ void JaroliftController::cmdSetEndPointDown(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::cmdDeleteEndPointDown(uint8_t channel) {
-  if (!initOK_)
+  if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
   devCount_ = getDeviceCounter();
@@ -838,10 +851,11 @@ void JaroliftController::processRxData() {
 
     rxKeyGen();
     uint32_t decoded = rxDecode();
-    if (rxFunction_ == 0x4)
+    if (rxFunction_ == 0x4) {
       steadyCount_++;
-    else
+    } else if (steadyCount_ > 0) {
       steadyCount_--;
+    }
     if (steadyCount_ > 10 && steadyCount_ <= 40) {
       rxFunction_ = 0x3;
       steadyCount_ = 0;

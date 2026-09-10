@@ -125,10 +125,12 @@ private:
   static constexpr char *TAG = "JARO-LIB"; // LOG TAG
 
   // Diskriminierungsarrays (analog zu den Originalwerten)
-  uint8_t discLowArr_[16];
-  uint8_t discHighArr_[16];
+  static constexpr uint8_t kChannelCount = 16;
+  uint8_t discLowArr_[kChannelCount];
+  uint8_t discHighArr_[kChannelCount];
 
   // Hilfsfunktionen
+  bool isValidChannel(uint8_t channel) const;
   void updateDeviceCounter(bool increment);
 
   void radioTxFrame(int length);
