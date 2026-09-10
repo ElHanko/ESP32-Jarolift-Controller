@@ -1,5 +1,6 @@
 #include <Dusk2Dawn.h>
 #include <EspStrUtil.h>
+#include <esp_ota_ops.h>
 #include <basics.h>
 #include <jarolift.h>
 #include <language.h>
@@ -124,7 +125,12 @@ void updateSystemInfoElements() {
   }
 
   // ESP informations
-  webUI.addJson(jsonDoc, "p09_esp_flash_usage", ESP.getSketchSize() * 100.0f / ESP.getFreeSketchSpace());
+  const esp_partition_t *runningPartition = esp_ota_get_running_partition();
+  if (runningPartition != nullptr && runningPartition->size > 0) {
+    webUI.addJson(jsonDoc, "p09_esp_flash_usage", ESP.getSketchSize() * 100.0f / runningPartition->size);
+  } else {
+    webUI.addJson(jsonDoc, "p09_esp_flash_usage", "---");
+  }
   webUI.addJson(jsonDoc, "p09_esp_heap_usage", (ESP.getHeapSize() - ESP.getFreeHeap()) * 100.0f / ESP.getHeapSize());
   webUI.addJson(jsonDoc, "p09_esp_maxallocheap", ESP.getMaxAllocHeap() / 1000.0f);
   webUI.addJson(jsonDoc, "p09_esp_minfreeheap", ESP.getMinFreeHeap() / 1000.0f);
