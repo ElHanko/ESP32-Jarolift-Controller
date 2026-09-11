@@ -23,7 +23,7 @@ static AsyncMqttClient mqtt_client;
 static bool bootUpMsgDone, setupDone = false;
 static const char *TAG = "MQTT"; // LOG TAG
 static char lastError[64] = "---";
-static int mqtt_retry = 0;
+static bool mqttConnectAttempted = false;
 static muTimer mqttReconnectTimer;
 
 /**
@@ -152,7 +152,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
  * @return  none
  * *******************************************************************/
 void onMqttConnect(bool sessionPresent) {
-  mqtt_retry = 0;
+  mqttConnectAttempted = false;
   ESP_LOGI(TAG, "MQTT connected");
   // Once connected, publish an announcement...
   sendWiFiInfo();
@@ -251,26 +251,17 @@ void mqttCyclic() {
     setupDone = true;
   }
 
-  // automatic reconnect to mqtt broker if connection is lost - try 5 times, then reboot
+  // automatic reconnect to mqtt broker if connection is lost
   if (!mqtt_client.connected() && (wifi.connected || eth.connected)) {
-    if (mqtt_retry == 0) {
-      mqtt_retry++;
+    if (!mqttConnectAttempted) {
+      mqttConnectAttempted = true;
+      mqttReconnectTimer.delayReset();
       mqtt_client.connect();
-      ESP_LOGI(TAG, "MQTT - connection attempt: 1/5");
+      ESP_LOGI(TAG, "MQTT - connection attempt");
     } else if (mqttReconnectTimer.delayOnTrigger(true, MQTT_RECONNECT)) {
       mqttReconnectTimer.delayReset();
-      if (mqtt_retry < 5) {
-        mqtt_retry++;
-        mqtt_client.connect();
-        ESP_LOGI(TAG, "MQTT - connection attempt: %i/5", mqtt_retry);
-      } else {
-        ESP_LOGI(TAG, "MQTT connection not possible, esp rebooting...");
-        EspSysUtil::RestartReason::saveLocal("no mqtt connection");
-        yield();
-        delay(1000);
-        yield();
-        ESP.restart();
-      }
+      mqtt_client.connect();
+      ESP_LOGI(TAG, "MQTT - connection attempt");
     }
   }
 

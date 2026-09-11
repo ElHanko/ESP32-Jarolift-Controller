@@ -32,7 +32,6 @@ SPIClass *SPI_2;
 s_espInfo espInfo;
 
 static muTimer wifiReconnectTimer = muTimer(); // timer for reconnect delay
-static int wifi_retry = 0;
 static const char *TAG = "SETUP"; // LOG TAG
 
 /**
@@ -56,7 +55,6 @@ void ntpSetup() {
  * @return  none
  * *******************************************************************/
 void onWiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-  wifi_retry = 0;
   ESP_LOGI(TAG, "Connected to AP successfully!");
 }
 
@@ -99,23 +97,11 @@ void checkWiFi() {
   // Ethernet is also not connected - so we need to establish WiFi
   if (wifiReconnectTimer.delayOnTrigger((!wifi.connected && !eth.connected), WIFI_RECONNECT)) {
     wifiReconnectTimer.delayReset();
-
-    if (wifi_retry < 5) {
-      wifi_retry++;
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(config.wifi.ssid, config.wifi.password);
-      WiFi.hostname(config.wifi.hostname);
-      MDNS.begin(config.wifi.hostname);
-      ESP_LOGI(TAG, "WiFi Mode STA - Trying connect to: %s", config.wifi.ssid);
-      ESP_LOGI(TAG, "WiFi connection - attempt: %i/5", wifi_retry);
-    } else {
-      ESP_LOGW(TAG, "Wifi connection not possible, esp rebooting...");
-      EspSysUtil::RestartReason::saveLocal("no wifi connection");
-      yield();
-      delay(1000);
-      yield();
-      ESP.restart();
-    }
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(config.wifi.ssid, config.wifi.password);
+    WiFi.hostname(config.wifi.hostname);
+    MDNS.begin(config.wifi.hostname);
+    ESP_LOGI(TAG, "WiFi Mode STA - Trying connect to: %s", config.wifi.ssid);
   }
 }
 
