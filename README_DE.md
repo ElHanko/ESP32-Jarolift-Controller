@@ -31,7 +31,7 @@
 > Angriffsfläche und die Hardwarekonfiguration, die in diesem Fork tatsächlich
 > verwendet und getestet wird.
 
-Aktuelle Version: **2026.1.0**
+Aktuelle Version: **2026.2.1**
 
 Versionsschema:
 
@@ -278,10 +278,16 @@ Relevante Artefakte:
 ```text
 firmware.bin
 firmware_merged.bin
+esp32_jarolift_ota_2026.2.1.bin
+esp32_jarolift_flash_2026.2.1.bin
 bootloader.bin
 partitions.bin
 SHA256SUMS
 ```
+
+`firmware.bin` und `esp32_jarolift_ota_2026.2.1.bin` sind das
+Applikations-/OTA-Image. `firmware_merged.bin` und
+`esp32_jarolift_flash_2026.2.1.bin` sind das vollständige kombinierte Image.
 
 `SHA256SUMS` enthält die Prüfsummen aller erzeugten Binärdateien.
 
@@ -628,14 +634,17 @@ Gleichwertige Payloads:
 
 # Timer
 
-Der integrierte Timer kann einzelne Rollläden oder Gruppen steuern.
+Der integrierte Timer kann einzelne Rollläden oder Gruppen in vier Modi
+steuern:
 
-Als Trigger stehen zur Verfügung:
+- feste Zeit
+- Astro / Sonnenaufgang oder Sonnenuntergang
+- späterer Zeitpunkt
+- früherer Zeitpunkt
 
-- feste Uhrzeit
-- Sonnenaufgang
-- Sonnenuntergang
-- optionaler Zeitversatz
+„Späterer Zeitpunkt“ verwendet den späteren Wert aus Astro-Zeitpunkt und
+konfigurierter Vergleichszeit. „Früherer Zeitpunkt“ verwendet entsprechend
+den früheren Wert.
 
 # Konfiguration sichern
 

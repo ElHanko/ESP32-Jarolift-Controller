@@ -30,7 +30,7 @@
 > focusing on a reproducible build, a reduced attack surface and the hardware
 > configuration actually used and tested by this fork.
 
-Current version: **2026.1.0**
+Current version: **2026.2.1**
 
 Version scheme:
 
@@ -273,10 +273,16 @@ Relevant artifacts:
 ```text
 firmware.bin
 firmware_merged.bin
+esp32_jarolift_ota_2026.2.1.bin
+esp32_jarolift_flash_2026.2.1.bin
 bootloader.bin
 partitions.bin
 SHA256SUMS
 ```
+
+`firmware.bin` and `esp32_jarolift_ota_2026.2.1.bin` are the
+application/OTA image. `firmware_merged.bin` and
+`esp32_jarolift_flash_2026.2.1.bin` are the complete flash image.
 
 `SHA256SUMS` contains checksums for all generated binary files.
 
@@ -604,14 +610,16 @@ Equivalent payload representations:
 
 # Timers
 
-The integrated timer can control individual shutters or groups.
-
-Triggers can use:
+The integrated timer can control individual shutters or groups using four
+modes:
 
 - fixed time
-- sunrise
-- sunset
-- optional time offset
+- Astro / sunrise or sunset
+- later time
+- earlier time
+
+Later time uses the later of the astronomical event and the configured
+comparison time. Earlier time uses the earlier of those two times.
 
 # Configuration backup
 

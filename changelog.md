@@ -1,4 +1,36 @@
 **Changelog**
+# 2026.2.1
+
+## what's new
+
+### Jarolift reliability
+
+KeeLoq device-counter handling now fails safely when the persistent counter cannot be read or written. The next counter value is persisted before transmission so that a storage failure cannot silently result in reuse of a rolling code.
+
+Jarolift receive processing now uses a stable snapshot of the pulse buffer. The shared receive buffer is protected briefly while the snapshot is created, and only complete frames are decoded.
+
+### Network reliability
+
+Wi-Fi and MQTT connection failures no longer reboot the complete controller after a fixed number of attempts. Reconnection now continues at the existing retry intervals so local Jarolift and timer functionality can remain available during network or broker outages.
+
+Disabling MQTT now also disconnects an existing MQTT connection and resets the MQTT connection state so that MQTT can later be enabled again without restarting the controller.
+
+### Configuration
+
+The NTP enable setting is now respected during startup. When NTP is disabled, the controller no longer initializes an NTP server.
+
+## changelog
+
+* [FIX] fail safely when the KeeLoq device counter cannot be read or persisted
+* [FIX] persist the next rolling counter before transmitting a Jarolift command
+* [FIX] decode Jarolift receive data from a stable pulse-buffer snapshot
+* [FIX] require a complete receive frame before Jarolift decoding
+* [FIX] retry Wi-Fi and MQTT connections without rebooting the controller
+* [FIX] disconnect and reset MQTT state when MQTT is disabled
+* [FIX] honor the NTP enable setting during startup
+
+---
+
 # 2026.2.0
 
 ## what's new
