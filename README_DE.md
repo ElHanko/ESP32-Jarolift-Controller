@@ -259,13 +259,18 @@ Der echte Schlüssel darf nicht committed werden.
 
 # Build
 
-Die Firmware wird gebaut mit:
+## Persönlicher Build
+
+Die private Secret-Datei wie oben beschrieben anlegen und individuell
+anpassen. Anschließend wird die Firmware gebaut mit:
 
 ```sh
 ./build/build.sh
 ```
 
-Der komplette Build läuft innerhalb eines Docker-Containers.
+Dieser Modus verwendet ausschließlich `include/local_secrets.h` und bricht
+ab, wenn die Datei fehlt. Der komplette Build läuft innerhalb eines
+Docker-Containers.
 
 Die erzeugten Dateien liegen anschließend unter:
 
@@ -278,16 +283,13 @@ Relevante Artefakte:
 ```text
 firmware.bin
 firmware_merged.bin
-esp32_jarolift_ota_2026.2.1.bin
-esp32_jarolift_flash_2026.2.1.bin
 bootloader.bin
 partitions.bin
 SHA256SUMS
 ```
 
-`firmware.bin` und `esp32_jarolift_ota_2026.2.1.bin` sind das
-Applikations-/OTA-Image. `firmware_merged.bin` und
-`esp32_jarolift_flash_2026.2.1.bin` sind das vollständige kombinierte Image.
+`firmware.bin` ist das Applikations-/OTA-Image. `firmware_merged.bin` ist das
+vollständige kombinierte Image.
 
 `SHA256SUMS` enthält die Prüfsummen aller erzeugten Binärdateien.
 
@@ -296,6 +298,39 @@ Das unterstützte Build-Skript baut aktuell die PlatformIO-Umgebung:
 ```text
 esp32
 ```
+
+## Öffentlicher Release-Build
+
+Öffentliche Release-Artefakte werden gebaut mit:
+
+```sh
+./build/build.sh release
+```
+
+Dieser Modus verwendet die öffentlichen Werte aus
+`include/local_secrets.example.h`. Er erzeugt
+`include/default_local_secrets.h` ausschließlich im temporären
+`/work`-Workspace und verwendet sie dort als `include/local_secrets.h`.
+
+Zusätzlich zu den generischen Artefakten erzeugt der Release-Modus:
+
+```text
+esp32_jarolift_ota_<VERSION>.bin
+esp32_jarolift_flash_<VERSION>.bin
+```
+
+Die versionierte OTA-Datei ist bytegleich mit `firmware.bin`; die
+versionierte Flash-Datei ist bytegleich mit `firmware_merged.bin`.
+
+> [!WARNING]
+> Vorgefertigte öffentliche Release-Binaries enthalten öffentliche
+> Default-Secrets. Deren `SETUP_AP_PASSWORD` und `CONFIG_ENCRYPTION_KEY` sind
+> nicht geheim.
+>
+> Für dauerhafte Installationen wird ausdrücklich ein individueller
+> Build mit privater `include/local_secrets.h` empfohlen. Diese Datei niemals
+> committen. Ein Wechsel des `CONFIG_ENCRYPTION_KEY` kann bereits gespeicherte
+> verschlüsselte Zugangsdaten unlesbar machen.
 
 # Flashen
 
@@ -391,11 +426,9 @@ Bei einem bereits eingerichteten Controller sollte für normale Updates
 
 Der Setup Mode dient zur Erstkonfiguration und Wiederherstellung.
 
-Er kann über den Multiple-Reset-Detector aktiviert werden, indem der ESP32
-mehrfach innerhalb des konfigurierten Zeitfensters neu gestartet wird.
+Er kann über den Multiple-Reset-Detector aktiviert werden, indem der ESP32 mehrfach innerhalb des konfigurierten Zeitfensters neu gestartet wird.
 
-Der Setup Mode wird außerdem aktiviert, wenn für den Normalbetrieb notwendige
-Netzwerk- oder WebUI-Konfiguration fehlt.
+Der Setup Mode wird außerdem aktiviert, wenn für den Normalbetrieb notwendige Netzwerk- oder WebUI-Konfiguration fehlt.
 
 Im Setup Mode erstellt der ESP32 folgenden Access Point:
 
@@ -403,19 +436,13 @@ Im Setup Mode erstellt der ESP32 folgenden Access Point:
 SSID: ESP32-Jarolift
 ```
 
-Das WPA2-Passwort wird über:
+Bei den vorgefertigten Release-Binaries lautet das WPA2-Passwort:
 
 ```text
-SETUP_AP_PASSWORD
+change-this-password
 ```
 
-in:
-
-```text
-include/local_secrets.h
-```
-
-festgelegt.
+Dieses Passwort stammt aus den öffentlichen Default-Secrets und ist daher **nicht geheim**.
 
 Nach dem Verbinden mit dem Access Point ist die WebUI erreichbar unter:
 
@@ -423,8 +450,24 @@ Nach dem Verbinden mit dem Access Point ist die WebUI erreichbar unter:
 http://192.168.4.1
 ```
 
-Die zusätzliche WebUI-Authentifizierung ist im Setup Mode deaktiviert, da der
-Zugang bereits durch das separate WPA2-Netz geschützt wird.
+Die zusätzliche WebUI-Authentifizierung ist im Setup Mode deaktiviert, da der Zugang bereits durch das separate WPA2-Netz geschützt wird.
+
+Für eine dauerhafte Installation wird empfohlen, die Firmware selbst zu bauen und in:
+
+```text
+include/local_secrets.h
+```
+
+ein eigenes `SETUP_AP_PASSWORD` sowie einen eigenen `CONFIG_ENCRYPTION_KEY` zu verwenden.
+
+Als Vorlage dient:
+
+```text
+include/local_secrets.example.h
+```
+
+Die in den vorgefertigten Release-Binaries enthaltenen Default-Secrets sind öffentlich bekannt und sollten nicht als individuelle Sicherheitsmerkmale betrachtet werden.
+
 
 # WebUI-Authentifizierung
 

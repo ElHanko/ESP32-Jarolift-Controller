@@ -14,28 +14,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Install the same PlatformIO version used by the project build
-      - name: Install PlatformIO
-        run: python -m pip install --disable-pip-version-check platformio==6.1.19
-
-      # 3. Generate the WebUI from the checked-out sources
+      # 2. Generate the WebUI from the checked-out sources
       - name: Generate WebUI
-        run: pio run -e esp32
+        run: ./build/build.sh release
 
-      # 4. Verify the complete Pages output
+      # 3. Verify the complete Pages output
       - name: Verify Pages output
         run: |
-          test -s web/output/index.html
-          test -s web/output/lib.css
-          test -s web/output/user.css
-          test -s web/output/lib.js
-          test -s web/output/user.js
-          test -s web/output/config.json
-          test -s web/output/sim.json
+          test -s build/artifacts/web/index.html
+          test -s build/artifacts/web/lib.css
+          test -s build/artifacts/web/user.css
+          test -s build/artifacts/web/lib.js
+          test -s build/artifacts/web/user.js
+          test -s build/artifacts/web/config.json
+          test -s build/artifacts/web/sim.json
 
-      # 5. Deploy to GitHub Pages
+      # 4. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: web/output
+          publish_dir: build/artifacts/web

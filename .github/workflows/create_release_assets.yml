@@ -70,16 +70,13 @@ jobs:
           fi
         shell: bash
 
-      - name: Install PlatformIO
-        run: python -m pip install --disable-pip-version-check platformio==6.1.19
-
       - name: Build release assets
-        run: pio run -e esp32
+        run: ./build/build.sh release
 
       - name: Check release assets
         run: |
-          test -f "release/esp32_jarolift_ota_${VERSION}.bin"
-          test -f "release/esp32_jarolift_flash_${VERSION}.bin"
+          test -f "build/artifacts/esp32_jarolift_ota_${VERSION}.bin"
+          test -f "build/artifacts/esp32_jarolift_flash_${VERSION}.bin"
 
       - name: Create release
         env:
@@ -88,8 +85,8 @@ jobs:
         run: |
           # Erstelle das Release und lade die Assets hoch
           gh release create "$tag" \
-              "release/esp32_jarolift_ota_${VERSION}.bin" \
-              "release/esp32_jarolift_flash_${VERSION}.bin" \
+              "build/artifacts/esp32_jarolift_ota_${VERSION}.bin" \
+              "build/artifacts/esp32_jarolift_flash_${VERSION}.bin" \
               --repo="$GITHUB_REPOSITORY" \
               --title="${tag}" \
               -F release_notes.md

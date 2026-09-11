@@ -254,12 +254,16 @@ Do not commit the real key.
 
 # Build
 
-Build the firmware with:
+## Personal build
+
+Create and customize the private secrets file as described above, then build
+the firmware with:
 
 ```sh
 ./build/build.sh
 ```
 
+This mode uses only `include/local_secrets.h` and fails if the file is missing.
 The build runs inside Docker.
 
 The resulting files are written to:
@@ -273,21 +277,49 @@ Relevant artifacts:
 ```text
 firmware.bin
 firmware_merged.bin
-esp32_jarolift_ota_2026.2.1.bin
-esp32_jarolift_flash_2026.2.1.bin
 bootloader.bin
 partitions.bin
 SHA256SUMS
 ```
 
-`firmware.bin` and `esp32_jarolift_ota_2026.2.1.bin` are the
-application/OTA image. `firmware_merged.bin` and
-`esp32_jarolift_flash_2026.2.1.bin` are the complete flash image.
+`firmware.bin` is the application/OTA image. `firmware_merged.bin` is the
+complete flash image.
 
 `SHA256SUMS` contains checksums for all generated binary files.
 
 The supported build script currently builds the `esp32` PlatformIO
 environment.
+
+## Public release build
+
+Build public release artifacts with:
+
+```sh
+./build/build.sh release
+```
+
+This mode uses the public values from `include/local_secrets.example.h`. It
+creates `include/default_local_secrets.h` only in the temporary `/work`
+workspace and uses it there as `include/local_secrets.h`.
+
+In addition to the generic artifacts, release mode creates:
+
+```text
+esp32_jarolift_ota_<VERSION>.bin
+esp32_jarolift_flash_<VERSION>.bin
+```
+
+The versioned OTA file is identical to `firmware.bin`; the versioned flash
+file is identical to `firmware_merged.bin`.
+
+> [!WARNING]
+> Prebuilt public release binaries contain public default secrets. Their
+> `SETUP_AP_PASSWORD` and `CONFIG_ENCRYPTION_KEY` are not secret.
+>
+> For permanent installations, an individual build with a private
+> `include/local_secrets.h` is strongly recommended. Never commit this file.
+> Changing `CONFIG_ENCRYPTION_KEY` can make previously stored encrypted
+> credentials unreadable.
 
 # Flashing
 
@@ -387,17 +419,13 @@ While Setup Mode is active, the controller creates:
 SSID: ESP32-Jarolift
 ```
 
-The WPA2 password is defined by:
+For the prebuilt release binaries, the WPA2 password is:
 
 ```text
-SETUP_AP_PASSWORD
+change-this-password
 ```
 
-in:
-
-```text
-include/local_secrets.h
-```
+This password comes from the public default secrets and is therefore **not secret**.
 
 After connecting to the access point, open:
 
@@ -405,8 +433,21 @@ After connecting to the access point, open:
 http://192.168.4.1
 ```
 
-WebUI authentication is disabled in Setup Mode because access is protected
-by the dedicated WPA2 network.
+WebUI authentication is disabled in Setup Mode because access is protected by the dedicated WPA2 network.
+
+For a permanent installation, building the firmware yourself is recommended. Configure your own `SETUP_AP_PASSWORD` and `CONFIG_ENCRYPTION_KEY` in:
+
+```text
+include/local_secrets.h
+```
+
+Use the following file as a template:
+
+```text
+include/local_secrets.example.h
+```
+
+The default secrets contained in the prebuilt release binaries are publicly known and should not be considered individual security credentials.
 
 # WebUI authentication
 
