@@ -31,7 +31,7 @@
 > Angriffsfläche und die Hardwarekonfiguration, die in diesem Fork tatsächlich
 > verwendet und getestet wird.
 
-Aktuelle Version: **2026.2.1**
+Aktuelle Version: **2026.2.2**
 
 Versionsschema:
 

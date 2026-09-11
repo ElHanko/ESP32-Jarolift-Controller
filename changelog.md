@@ -1,4 +1,43 @@
 **Changelog**
+# 2026.2.2
+
+## what's new
+
+### Release build security
+
+The prebuilt binary assets for `2026.2.1` were withdrawn. Users of prebuilt
+firmware should use `2026.2.2` or later.
+
+Public release binaries are now built exclusively with the public default
+secrets from `include/local_secrets.example.h`. Private local secrets are
+isolated from the release build container and are never included in public
+release artifacts.
+
+### Build system
+
+The build process now has two explicit entry points:
+
+- `./build/build.sh` for personal builds using `include/local_secrets.h`
+- `./build/build.sh release` for public release builds using public defaults
+
+Release artifact generation is now handled centrally by `build/build.sh`.
+The previous `scripts/build_release.py` PlatformIO post-build script has been
+removed.
+
+GitHub release and Pages workflows now use the same centralized release build
+path as local release builds.
+
+## changelog
+
+* [FIX] prevent private local secrets from being included in public release binaries
+* [FIX] isolate private `local_secrets.h` from the release build container
+* [BUILD] add explicit personal and public release build modes
+* [BUILD] centralize release artifact generation in `build/build.sh`
+* [BUILD] use PlatformIO `firmware.factory.bin` as the complete flash image
+* [CI] use the centralized release build path for GitHub releases and Pages
+
+---
+
 # 2026.2.1
 
 ## what's new
