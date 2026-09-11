@@ -21,6 +21,7 @@ std::queue<s_MqttMessage> mqttCmdQueue;
 static void processMqttMessage();
 static AsyncMqttClient mqtt_client;
 static bool bootUpMsgDone, setupDone = false;
+static bool callbacksRegistered = false;
 static const char *TAG = "MQTT"; // LOG TAG
 static char lastError[64] = "---";
 static bool mqttConnectAttempted = false;
@@ -219,9 +220,12 @@ const char *mqttGetLastError() { return lastError; }
  * *******************************************************************/
 void mqttSetup() {
 
-  mqtt_client.onConnect(onMqttConnect);
-  mqtt_client.onDisconnect(onMqttDisconnect);
-  mqtt_client.onMessage(onMqttMessage);
+  if (!callbacksRegistered) {
+    mqtt_client.onConnect(onMqttConnect);
+    mqtt_client.onDisconnect(onMqttDisconnect);
+    mqtt_client.onMessage(onMqttMessage);
+    callbacksRegistered = true;
+  }
   mqtt_client.setServer(config.mqtt.server, config.mqtt.port);
   mqtt_client.setClientId(config.wifi.hostname);
   mqtt_client.setCredentials(config.mqtt.user, config.mqtt.password);
@@ -230,6 +234,31 @@ void mqttSetup() {
   mqtt_client.connected();
 
   ESP_LOGI(TAG, "MQTT setup done!");
+}
+
+/**
+ * *******************************************************************
+ * @brief   enable or disable MQTT
+ * @param   enabled
+ * @return  none
+ * *******************************************************************/
+void mqttSetEnabled(bool enabled) {
+  if (enabled && config.mqtt.enable) {
+    return;
+  }
+
+  config.mqtt.enable = enabled;
+  if (!enabled) {
+    if (mqtt_client.connected()) {
+      mqtt_client.disconnect();
+    } else {
+      mqtt_client.disconnect(true);
+    }
+  }
+
+  mqttConnectAttempted = false;
+  mqttReconnectTimer.delayReset();
+  setupDone = false;
 }
 
 /**

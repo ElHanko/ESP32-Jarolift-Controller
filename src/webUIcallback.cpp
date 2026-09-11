@@ -2,6 +2,7 @@
 #include <basics.h>
 #include <jarolift.h>
 #include <message.h>
+#include <mqtt.h>
 #include <timer.h>
 #include <webUI.h>
 #include <webUIupdates.h>
@@ -135,7 +136,7 @@ void webCallback(const char *elementId, const char *value) {
 
   // MQTT
   if (strcmp(elementId, "cfg_mqtt_enable") == 0) {
-    config.mqtt.enable = EspStrUtil::stringToBool(value);
+    mqttSetEnabled(EspStrUtil::stringToBool(value));
   }
   if (strcmp(elementId, "cfg_mqtt_server") == 0) {
     snprintf(config.mqtt.server, sizeof(config.mqtt.server), "%s", value);
