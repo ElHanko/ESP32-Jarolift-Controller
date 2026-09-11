@@ -821,16 +821,31 @@ void JaroliftController::cmdDeleteEndPointDown(uint8_t channel) {
  * @return  none
  * *******************************************************************/
 void JaroliftController::processRxData() {
+  static constexpr size_t kDecodedPulseCount = 73;
+  unsigned int lowSnapshot[kDecodedPulseCount];
+  unsigned int hiSnapshot[kDecodedPulseCount];
 
-  // check if RX-Buffer is full and start to decode
-  if ((lowBuf_[0] > 3650 && lowBuf_[0] < 4300) && (pbWrite_ >= 65 && pbWrite_ <= 75)) {
-    rxDataReady_ = true;
+  noInterrupts();
+  bool frameReady =
+    (lowBuf_[0] > 3650 && lowBuf_[0] < 4300) &&
+    (pbWrite_ >= kDecodedPulseCount && pbWrite_ <= 75);
+  if (frameReady) {
+    memcpy(lowSnapshot, (const void *)lowBuf_, sizeof(lowSnapshot));
+    memcpy(hiSnapshot, (const void *)hiBuf_, sizeof(hiSnapshot));
     pbWrite_ = 0;
+    memset((void *)lowBuf_, 0, sizeof(lowBuf_));
+    memset((void *)hiBuf_, 0, sizeof(hiBuf_));
+  }
+  interrupts();
+
+  // start to decode the stable RX buffer snapshot
+  if (frameReady) {
+    rxDataReady_ = true;
 
     // extract Hopcode (32 Bit)
     rxHopCode_ = 0;
     for (int i = 0; i < 32; i++) {
-      if (lowBuf_[i + 1] < hiBuf_[i + 1])
+      if (lowSnapshot[i + 1] < hiSnapshot[i + 1])
         rxHopCode_ &= ~(1 << i);
       else
         rxHopCode_ |= (1 << i);
@@ -839,7 +854,7 @@ void JaroliftController::processRxData() {
     // extract Serial (28 Bit)
     rxSerial_ = 0;
     for (int i = 0; i < 28; i++) {
-      if (lowBuf_[i + 33] < hiBuf_[i + 33])
+      if (lowSnapshot[i + 33] < hiSnapshot[i + 33])
         rxSerial_ &= ~(1 << i);
       else
         rxSerial_ |= (1 << i);
@@ -848,7 +863,7 @@ void JaroliftController::processRxData() {
     // extract function code (4 Bit)
     rxFunction_ = 0;
     for (int i = 0; i < 4; i++) {
-      if (lowBuf_[61 + i] < hiBuf_[61 + i])
+      if (lowSnapshot[61 + i] < hiSnapshot[61 + i])
         rxFunction_ &= ~(1 << i);
       else
         rxFunction_ |= (1 << i);
@@ -856,7 +871,7 @@ void JaroliftController::processRxData() {
     // extract high disc - group bits (9-16 Bit)
     rxDiscH_ = 0;
     for (int i = 0; i < 8; i++) {
-      if (lowBuf_[65 + i] < hiBuf_[65 + i])
+      if (lowSnapshot[65 + i] < hiSnapshot[65 + i])
         rxDiscH_ &= ~(1 << i);
       else
         rxDiscH_ |= (1 << i);
@@ -887,8 +902,6 @@ void JaroliftController::processRxData() {
     rxDiscH_ = 0;
     rxHopCode_ = 0;
     rxFunction_ = 0;
-    memset((void *)lowBuf_, 0, sizeof(lowBuf_));
-    memset((void *)hiBuf_, 0, sizeof(hiBuf_));
   }
 }
 
