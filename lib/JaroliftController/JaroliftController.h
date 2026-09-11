@@ -66,8 +66,8 @@ public:
   void setRemoteCallback(void (*callback)(uint32_t serial, int8_t function, uint16_t channel)) { remoteCallback = callback; }
 
   // Hilfsfunktionen
-  uint16_t getDeviceCounter();
-  void setDeviceCounter(uint16_t newDevCnt);
+  bool getDeviceCounter(uint16_t &counter);
+  bool setDeviceCounter(uint16_t newDevCnt);
   uint32_t getSerial(uint8_t channel);
   bool getCC1101State();
   uint8_t getRssi();
@@ -131,7 +131,7 @@ private:
 
   // Hilfsfunktionen
   bool isValidChannel(uint8_t channel) const;
-  void updateDeviceCounter(bool increment);
+  bool updateDeviceCounter();
 
   void radioTxFrame(int length);
   void radioTxGroupH();
@@ -140,7 +140,7 @@ private:
   void enterTx();
   void processRxData();
   void generateKey();       // Schlüsselgenerierung (keygen)
-  void generateEncrypted(); // Verschlüsseln (keeloq)
+  bool generateEncrypted(); // Verschlüsseln (keeloq)
 
   void rxKeyGen();
   uint32_t rxDecode();

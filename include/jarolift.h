@@ -4,7 +4,7 @@ void jaroCmdSetDevCnt(uint16_t value);
 void jaroCmdReInit();
 bool getCC1101State();
 uint8_t getCC1101Rssi();
-uint16_t jaroGetDevCnt();
+bool jaroGetDevCnt(uint16_t &value);
 
 void jaroliftSetup();
 void jaroliftCyclic();

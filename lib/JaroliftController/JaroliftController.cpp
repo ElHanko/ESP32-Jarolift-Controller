@@ -107,67 +107,80 @@ bool JaroliftController::getCC1101State() { return cc1101_.connected(); }
 
 /**
  *******************************************************************
- * @brief   get state if CC1101 is connected
+ * @brief   get device counter
  * @param   none
- * @return  none
+ * @return  true if the counter was read or migrated successfully
  * *******************************************************************/
-uint16_t JaroliftController::getDeviceCounter() {
+bool JaroliftController::getDeviceCounter(uint16_t &counter) {
   nvs_handle_t nvsHandle;
   esp_err_t err = nvs_open("device_data", NVS_READWRITE, &nvsHandle);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to open NVS");
-    return 0;
+    ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(err));
+    return false;
   }
-  uint16_t counter = 0;
-  err = nvs_get_u16(nvsHandle, "devcnt", &counter);
+  uint16_t storedCounter = 0;
+  err = nvs_get_u16(nvsHandle, "devcnt", &storedCounter);
+  nvs_close(nvsHandle);
+
   if (err == ESP_ERR_NVS_NOT_FOUND) {
     // try to read from EEPROM if not found in NVS (migration)
-    EEPROM.get(0, counter);
-    nvs_set_u16(nvsHandle, "devcnt", counter);
-    nvs_commit(nvsHandle);
-    ESP_LOGI(TAG, "Migrated devcnt=%d from EEPROM to NVS", counter);
+    EEPROM.get(0, storedCounter);
+    if (!setDeviceCounter(storedCounter)) {
+      ESP_LOGE(TAG, "Failed to migrate device counter from EEPROM to NVS");
+      return false;
+    }
+    ESP_LOGI(TAG, "Migrated devcnt=%d from EEPROM to NVS", storedCounter);
+  } else if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to read device counter from NVS: %s", esp_err_to_name(err));
+    return false;
   }
-  nvs_close(nvsHandle);
-  if (counter == 0) {
-    counter = 1;
-    setDeviceCounter(counter);
+
+  if (storedCounter == 0) {
+    storedCounter = 1;
+    if (!setDeviceCounter(storedCounter)) {
+      return false;
+    }
   }
-  return counter;
+  counter = storedCounter;
+  return true;
 }
 
 /**
  *******************************************************************
  * @brief   set device counter
  * @param   newDevCnt
- * @return  none
+ * @return  true if the counter was persisted
  * *******************************************************************/
-void JaroliftController::setDeviceCounter(uint16_t newDevCnt) {
-  devCount_ = newDevCnt;
+bool JaroliftController::setDeviceCounter(uint16_t newDevCnt) {
   nvs_handle_t nvsHandle;
   esp_err_t err = nvs_open("device_data", NVS_READWRITE, &nvsHandle);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to open NVS");
-    return;
+    ESP_LOGE(TAG, "Failed to open NVS: %s", esp_err_to_name(err));
+    return false;
   }
-  nvs_set_u16(nvsHandle, "devcnt", devCount_);
-  nvs_commit(nvsHandle);
+  err = nvs_set_u16(nvsHandle, "devcnt", newDevCnt);
+  if (err == ESP_OK) {
+    err = nvs_commit(nvsHandle);
+  }
   nvs_close(nvsHandle);
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to persist device counter: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  devCount_ = newDevCnt;
   delay(100);
+  return true;
 }
 
 /**
  *******************************************************************
  * @brief   update and increment device counter
- * @param   increment
- * @return  none
+ * @param   none
+ * @return  true if the updated counter was persisted
  * *******************************************************************/
-void JaroliftController::updateDeviceCounter(bool increment) {
-  devCount_ = getDeviceCounter();
-  if (increment) {
-    devCount_++;
-    setDeviceCounter(devCount_);
-  }
-}
+bool JaroliftController::updateDeviceCounter() { return setDeviceCounter(devCount_ + 1); }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // CC1101 radio functions group
@@ -328,13 +341,21 @@ void JaroliftController::generateKey() {
  *******************************************************************
  * @brief   Generation of the encrypted message (Hopcode)
  * @param   none
- * @return  none
+ * @return  true if the next counter was persisted before transmission
  * *******************************************************************/
-void JaroliftController::generateEncrypted() {
+bool JaroliftController::generateEncrypted() {
   Keeloq k(deviceKeyMSB_, deviceKeyLSB_);
-  devCount_ = getDeviceCounter();
+  if (!getDeviceCounter(devCount_)) {
+    ESP_LOGE(TAG, "Jarolift transmission aborted: device counter unavailable");
+    return false;
+  }
   unsigned int result = (disc_ << 16) | devCount_; // Append counter value to discrimination value
   encrypted_ = k.encrypt(result);
+  if (!updateDeviceCounter()) {
+    ESP_LOGE(TAG, "Jarolift transmission aborted: next device counter not persisted");
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -448,11 +469,11 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
     discH_ = discHighArr_[channel];
     disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
     generateKey();
-    generateEncrypted();
+    if (!generateEncrypted())
+      return;
     enterTx();
     radioTx(2); // send command 2-times with same devCnt
     enterRx();
-    updateDeviceCounter(true);
     break;
 
   case CMD_DOWN:
@@ -461,11 +482,11 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
     discH_ = discHighArr_[channel];
     disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
     generateKey();
-    generateEncrypted();
+    if (!generateEncrypted())
+      return;
     enterTx();
     radioTx(2); // send command 2-times with same devCnt
     enterRx();
-    updateDeviceCounter(true);
     break;
 
   case CMD_STOP:
@@ -474,11 +495,11 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
     discH_ = discHighArr_[channel];
     disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
     generateKey();
-    generateEncrypted();
+    if (!generateEncrypted())
+      return;
     enterTx();
     radioTx(2); // send command 2-times
     enterRx();
-    updateDeviceCounter(true);
     break;
 
   case CMD_SHADE:
@@ -487,11 +508,11 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
     discH_ = discHighArr_[channel];
     disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
     generateKey();
-    generateEncrypted();
+    if (!generateEncrypted())
+      return;
     enterTx();
     radioTx(20); // send "continuos STOP"
     enterRx();
-    updateDeviceCounter(true);
     break;
 
   case CMD_SET_SHADE:
@@ -502,10 +523,10 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
     generateKey();
     // send 4-times STOP
     for (int i = 0; i < 4; i++) {
+      if (!generateEncrypted())
+        return;
       enterTx();
-      generateEncrypted();
       radioTx(1);
-      updateDeviceCounter(true);
       enterRx();
       delay(300);
     }
@@ -525,7 +546,6 @@ void JaroliftController::cmdChannel(commands cmd, uint8_t channel) {
 void JaroliftController::cmdGroup(commands cmd, uint16_t groupMask) {
   if (!initOK_)
     return;
-  devCount_ = getDeviceCounter();
   newSerial_ = getSerial(0);
 
   switch (cmd) {
@@ -550,7 +570,8 @@ void JaroliftController::cmdGroup(commands cmd, uint16_t groupMask) {
   discH_ = (groupMask >> 8) & 0x00FF;
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
+  if (!generateEncrypted())
+    return;
   enterTx();
   if (cmd == CMD_SHADE) {
     radioTx(20); // send "continuos STOP"
@@ -559,7 +580,6 @@ void JaroliftController::cmdGroup(commands cmd, uint16_t groupMask) {
   }
 
   enterRx();
-  updateDeviceCounter(true);
 }
 
 /**
@@ -572,26 +592,25 @@ void JaroliftController::cmdLearn(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "learn | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   button_ = config_.learnMode ? 0xA : 0x1;
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "learn | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
   enterTx();
   radioTx(2);
   enterRx();
-  updateDeviceCounter(true);
   if (config_.learnMode) {
     delay(1000);
     button_ = 0x4; // Stop
-    generateEncrypted();
+    if (!generateEncrypted())
+      return;
     enterTx();
     radioTx(2);
     enterRx();
-    updateDeviceCounter(true);
   }
 }
 
@@ -606,35 +625,33 @@ void JaroliftController::cmdUnlearn(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "unlearn | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
-  enterTx();
   button_ = FCT_CODE_UPDOWN; // Up+Down
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "unlearn | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
+  enterTx();
   radioTx(2);
   enterRx();
-  updateDeviceCounter(true);
   delay(300);
   for (int i = 0; i < 6; i++) {
     button_ = FCT_CODE_STOP; // 6x Stop
+    if (!generateEncrypted())
+      return;
     enterTx();
-    generateEncrypted();
     radioTx(2);
-    updateDeviceCounter(true);
     enterRx();
     delay(300);
   }
   button_ = FCT_CODE_UP; // UP
+  if (!generateEncrypted())
+    return;
   enterTx();
-  generateEncrypted();
   radioTx(2);
-  updateDeviceCounter(true);
   enterRx();
-  updateDeviceCounter(false);
 }
 
 /**
@@ -648,33 +665,32 @@ void JaroliftController::cmdSetEndPointUp(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "set upper end point | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
-  enterTx();
   button_ = FCT_CODE_UPDOWN; // Up+Down
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "set upper end point | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
+  enterTx();
   radioTx(1);
   enterRx();
-  updateDeviceCounter(true);
   delay(300);
   for (int i = 0; i < 2; i++) {
     button_ = FCT_CODE_STOP; // 2x Stop
+    if (!generateEncrypted())
+      return;
     enterTx();
-    generateEncrypted();
     radioTx(1);
-    updateDeviceCounter(true);
     enterRx();
     delay(300);
   }
   button_ = FCT_CODE_UP; // UP
+  if (!generateEncrypted())
+    return;
   enterTx();
-  generateEncrypted();
   radioTx(1);
-  updateDeviceCounter(true);
   enterRx();
 }
 
@@ -689,33 +705,32 @@ void JaroliftController::cmdDeleteEndPointUp(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "delete upper end point | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
-  enterTx();
   button_ = FCT_CODE_UPDOWN; // Up+Down
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "delete upper end point | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
+  enterTx();
   radioTx(1);
   enterRx();
-  updateDeviceCounter(true);
   delay(300);
   for (int i = 0; i < 4; i++) {
     button_ = FCT_CODE_STOP; // 4x Stop
+    if (!generateEncrypted())
+      return;
     enterTx();
-    generateEncrypted();
     radioTx(1);
-    updateDeviceCounter(true);
     enterRx();
     delay(300);
   }
   button_ = FCT_CODE_UP; // UP
+  if (!generateEncrypted())
+    return;
   enterTx();
-  generateEncrypted();
   radioTx(1);
-  updateDeviceCounter(true);
   enterRx();
 }
 
@@ -730,33 +745,32 @@ void JaroliftController::cmdSetEndPointDown(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "set lower end point | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
-  enterTx();
   button_ = FCT_CODE_UPDOWN; // Up+Down
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "set lower end point | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
+  enterTx();
   radioTx(1);
   enterRx();
-  updateDeviceCounter(true);
   delay(300);
   for (int i = 0; i < 2; i++) {
     button_ = FCT_CODE_STOP; // 2x Stop
+    if (!generateEncrypted())
+      return;
     enterTx();
-    generateEncrypted();
     radioTx(1);
-    updateDeviceCounter(true);
     enterRx();
     delay(300);
   }
   button_ = FCT_CODE_DOWN; // DOWN
+  if (!generateEncrypted())
+    return;
   enterTx();
-  generateEncrypted();
   radioTx(1);
-  updateDeviceCounter(true);
   enterRx();
 }
 
@@ -771,33 +785,32 @@ void JaroliftController::cmdDeleteEndPointDown(uint8_t channel) {
   if (!initOK_ || !isValidChannel(channel))
     return;
   newSerial_ = getSerial(channel);
-  devCount_ = getDeviceCounter();
-  ESP_LOGD(TAG, "delete lower end point | Device Counter: %d | Serial: 0x%08llx", devCount_, newSerial_);
   discL_ = discLowArr_[channel];
   discH_ = discHighArr_[channel];
   disc_ = (discL_ << 8) | (newSerial_ & 0xFF);
   generateKey();
-  generateEncrypted();
-  enterTx();
   button_ = FCT_CODE_UPDOWN; // Up+Down
+  if (!generateEncrypted())
+    return;
+  ESP_LOGD(TAG, "delete lower end point | Device Counter: %d | Serial: 0x%08llx", static_cast<uint16_t>(devCount_ - 1), newSerial_);
+  enterTx();
   radioTx(1);
   enterRx();
-  updateDeviceCounter(true);
   delay(300);
   for (int i = 0; i < 4; i++) {
     button_ = FCT_CODE_STOP; // 4x Stop
+    if (!generateEncrypted())
+      return;
     enterTx();
-    generateEncrypted();
     radioTx(1);
-    updateDeviceCounter(true);
     enterRx();
     delay(300);
   }
   button_ = FCT_CODE_DOWN; // DOWN
+  if (!generateEncrypted())
+    return;
   enterTx();
-  generateEncrypted();
   radioTx(1);
-  updateDeviceCounter(true);
   enterRx();
 }
 
@@ -888,7 +901,9 @@ void JaroliftController::processRxData() {
 void JaroliftController::begin() {
   ESP_LOGI(TAG, "start CC1101 setup");
   EEPROM.begin(sizeof(devCount_));
-  devCount_ = getDeviceCounter();
+  if (!getDeviceCounter(devCount_)) {
+    ESP_LOGE(TAG, "Device counter unavailable");
+  }
 
   cc1101_.setGPIO(gpio_.sck, gpio_.miso, gpio_.mosi, gpio_.cs, gpio_.gdo0);
   cc1101_.setTxPowerAmp(PA_LongDistance);

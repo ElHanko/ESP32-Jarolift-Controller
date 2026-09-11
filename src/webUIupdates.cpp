@@ -141,8 +141,7 @@ void updateSystemInfoElements() {
   webUI.addJson(jsonDoc, "p09_uptime", uptimeStr);
 
   // Device Counter
-  devCntNew = jaroGetDevCnt();
-  if (devCntNew != devCntOld) {
+  if (jaroGetDevCnt(devCntNew) && devCntNew != devCntOld) {
     devCntOld = devCntNew;
     webUI.addJson(jsonDoc, "p12_jaro_devcnt", devCntNew);
   }
@@ -173,7 +172,9 @@ void updateSystemInfoElementsStatic() {
   // restart reason
   webUI.addJson(jsonDoc, "p09_restart_reason", EspSysUtil::RestartReason::get());
 
-  webUI.addJson(jsonDoc, "p12_jaro_devcnt", jaroGetDevCnt());
+  if (jaroGetDevCnt(devCntNew)) {
+    webUI.addJson(jsonDoc, "p12_jaro_devcnt", devCntNew);
+  }
 
   // Sunrise, Sunset
   uint8_t sunriseHour, sunriseMinute;

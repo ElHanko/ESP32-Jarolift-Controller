@@ -198,14 +198,17 @@ void jaroliftSetup() {
     ESP_LOGE(TAG, "CC1101 Transceiver NOT connected!");
   }
 
-  ESP_LOGI(TAG, "read Device Counter from FLASH: %i", jarolift.getDeviceCounter());
+  uint16_t deviceCounter;
+  if (jarolift.getDeviceCounter(deviceCounter)) {
+    ESP_LOGI(TAG, "read Device Counter from FLASH: %i", deviceCounter);
+  }
 
   jarolift.setRemoteCallback(mqttSendRemote);
 }
 
 void jaroCmdReInit() { jaroliftSetup(); };
 void jaroCmdSetDevCnt(uint16_t value) { jarolift.setDeviceCounter(value); };
-uint16_t jaroGetDevCnt() { return jarolift.getDeviceCounter(); };
+bool jaroGetDevCnt(uint16_t &value) { return jarolift.getDeviceCounter(value); };
 bool getCC1101State() { return jarolift.getCC1101State(); };
 uint8_t getCC1101Rssi() { return jarolift.getRssi(); }
 
