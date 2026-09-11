@@ -22,3 +22,6 @@ include/local_secrets.h
 
 build/artifacts/*
 !build/artifacts/.gitkeep
+
+# Generated release artifacts
+/release/
