@@ -4,6 +4,32 @@
 // Definition of the static instance pointer
 JaroliftController *JaroliftController::instance_ = nullptr;
 
+#ifndef JAROLIFT_RX_DIAGNOSTICS
+#define JAROLIFT_RX_DIAGNOSTICS 0
+#endif
+
+// Functional RX state. This is part of the terminal-frame fix and must
+// remain active independently of diagnostics.
+static volatile bool rxTerminalFrameLocked = false;
+static volatile bool rxTerminalHighCaptured = false;
+
+#if JAROLIFT_RX_DIAGNOSTICS
+// Compile-time RX diagnostics. Disabled builds carry no ISR counter/
+// histogram overhead and emit no periodic diagnostic logs.
+static volatile uint32_t rxDiagEdgeCount = 0;
+static volatile unsigned int rxDiagMaxPulseCount = 0;
+static volatile uint32_t rxDiagLowPulseBins[8] = {};
+static volatile uint32_t rxDiagHighPulseBins[8] = {};
+static volatile bool rxDiagResetPending = false;
+static volatile uint8_t rxDiagResetReason = 0; // 1=GAP, 2=SYNC
+static volatile unsigned int rxDiagResetPulseCount = 0;
+static volatile unsigned long rxDiagResetGapUs = 0;
+static volatile unsigned long rxDiagResetLowUs = 0;
+static volatile unsigned long rxDiagResetHighUs = 0;
+static uint32_t rxDiagLastEdgeCount = 0;
+static unsigned long rxDiagLastLogMs = 0;
+#endif
+
 JaroliftController::JaroliftController()
     : devCount_(0), deviceKeyMSB_(0), deviceKeyLSB_(0), button_(0), discL_(0), discH_(0), disc_(0), newSerial_(0), encrypted_(0), pack_(0),
       pbWrite_(0), rxSerial_(0), rxHopCode_(0), rxFunction_(0), rxDiscH_(0), initOK_(false), steadyCount_(0), rxDataReady_(false) {
@@ -267,10 +293,23 @@ void JaroliftController::enterRx() {
   delay(2);
   unsigned long startTime = micros();
   uint8_t marcState = 0;
+#if JAROLIFT_RX_DIAGNOSTICS
+  bool timedOut = false;
+#endif
   while (((marcState = cc1101_.readStatusReg(CC1101_MARCSTATE)) & 0x1F) != 0x0D) {
-    if (micros() - startTime > 50000)
+    if (micros() - startTime > 50000) {
+#if JAROLIFT_RX_DIAGNOSTICS
+      timedOut = true;
+#endif
       break;
+    }
   }
+
+#if JAROLIFT_RX_DIAGNOSTICS
+  ESP_LOGI(TAG, "RX state | MARCSTATE: 0x%02x | timeout: %s",
+           marcState & 0x1F,
+           timedOut ? "yes" : "no");
+#endif
 }
 
 /**
@@ -410,24 +449,117 @@ void JaroliftController::handleRadioRxMeasure() {
   static unsigned long lineUp = 0;
   static unsigned long lineDown = 0;
   static unsigned long timeout = 0;
+#if JAROLIFT_RX_DIAGNOSTICS
+  static unsigned long rxDiagLastLowUs = 0;
+  static unsigned long rxDiagLastHighUs = 0;
+#endif
   unsigned long currentMicros = micros();
   int pinState = digitalRead(gpio_.gdo2);
+
+#if JAROLIFT_RX_DIAGNOSTICS
+  unsigned int rxDiagPulseCountBeforeGapReset = pbWrite_;
+  bool rxDiagCapturedGapThisEdge = false;
+  rxDiagEdgeCount++;
+#endif
+
+  // Keep a completed reconstructed frame stable until processRxData()
+  // has copied it. This avoids a following RF edge resetting the buffer
+  // before the main loop can take its atomic snapshot.
+  if (rxTerminalFrameLocked) {
+    return;
+  }
+
   if (currentMicros - timeout > 3500) {
+    bool terminalFrame =
+      pbWrite_ == 72 &&
+      rxTerminalHighCaptured &&
+      lowBuf_[0] > 3650 && lowBuf_[0] < 4300 &&
+      hiBuf_[72] > 300 && hiBuf_[72] < 1000;
+
+    if (terminalFrame) {
+      // Jarolift encodes each data bit as complementary HIGH/LOW timing.
+      // The final LOW half-pulse merges into the idle LOW after the frame,
+      // so derive it from the already captured HIGH half-pulse.
+      lowBuf_[72] = (hiBuf_[72] < 600) ? kHighPulse : kLowPulse;
+      pbWrite_ = 73;
+      rxTerminalFrameLocked = true;
+      return;
+    }
+
+#if JAROLIFT_RX_DIAGNOSTICS
+    if (pbWrite_ >= 20 && !rxDiagResetPending) {
+      rxDiagResetReason = 1;
+      rxDiagResetPulseCount = pbWrite_;
+      rxDiagResetGapUs = currentMicros - timeout;
+      rxDiagResetLowUs = rxDiagLastLowUs;
+      rxDiagResetHighUs = rxDiagLastHighUs;
+      rxDiagResetPending = true;
+      rxDiagCapturedGapThisEdge = true;
+    }
+#endif
     pbWrite_ = 0;
+    rxTerminalHighCaptured = false;
   }
   if (pbWrite_ >= kPulseBufferSize) {
     pbWrite_ = 0;
+    rxTerminalHighCaptured = false;
     return;
   }
   if (pinState) { // Übergang zu HIGH
     lineUp = currentMicros;
     unsigned long lowVal = lineUp - lineDown;
+
+#if JAROLIFT_RX_DIAGNOSTICS
+    rxDiagLastLowUs = lowVal;
+
+    if (rxDiagCapturedGapThisEdge && rxDiagResetPending) {
+      rxDiagResetLowUs = lowVal;
+    }
+
+    if (lowVal < 200)
+      rxDiagLowPulseBins[0]++;
+    else if (lowVal < 300)
+      rxDiagLowPulseBins[1]++;
+    else if (lowVal < 500)
+      rxDiagLowPulseBins[2]++;
+    else if (lowVal < 700)
+      rxDiagLowPulseBins[3]++;
+    else if (lowVal < 1000)
+      rxDiagLowPulseBins[4]++;
+    else if (lowVal < 3000)
+      rxDiagLowPulseBins[5]++;
+    else if (lowVal < 5000)
+      rxDiagLowPulseBins[6]++;
+    else
+      rxDiagLowPulseBins[7]++;
+#endif
+
     if (lowVal < kDebounce)
       return;
     if (lowVal > 300 && lowVal < 4300) {
       if (lowVal > 3650 && lowVal < 4300) {
+#if JAROLIFT_RX_DIAGNOSTICS
+        if (rxDiagCapturedGapThisEdge) {
+          // The generic gap check runs before lowVal is known. If this
+          // same edge turns out to be a valid sync pulse, classify the
+          // reset as SYNC instead of GAP without changing RX behaviour.
+          rxDiagResetReason = 2;
+          rxDiagResetPulseCount = rxDiagPulseCountBeforeGapReset;
+          rxDiagResetGapUs = currentMicros - timeout;
+          rxDiagResetLowUs = lowVal;
+          rxDiagResetHighUs = rxDiagLastHighUs;
+        } else if (pbWrite_ >= 20 && !rxDiagResetPending) {
+          rxDiagResetReason = 2;
+          rxDiagResetPulseCount = pbWrite_;
+          rxDiagResetGapUs = currentMicros - timeout;
+          rxDiagResetLowUs = lowVal;
+          rxDiagResetHighUs = rxDiagLastHighUs;
+          rxDiagResetPending = true;
+        }
+#endif
         timeout = currentMicros;
         pbWrite_ = 0;
+        rxTerminalHighCaptured = false;
         lowBuf_[pbWrite_] = lowVal;
         pbWrite_++;
       } else if (lowVal > 300 && lowVal < 1000) {
@@ -439,12 +571,47 @@ void JaroliftController::handleRadioRxMeasure() {
   } else { // Übergang zu LOW
     lineDown = currentMicros;
     unsigned long highVal = lineDown - lineUp;
+
+#if JAROLIFT_RX_DIAGNOSTICS
+    rxDiagLastHighUs = highVal;
+
+    if (rxDiagCapturedGapThisEdge && rxDiagResetPending) {
+      rxDiagResetHighUs = highVal;
+    }
+
+    if (highVal < 200)
+      rxDiagHighPulseBins[0]++;
+    else if (highVal < 300)
+      rxDiagHighPulseBins[1]++;
+    else if (highVal < 500)
+      rxDiagHighPulseBins[2]++;
+    else if (highVal < 700)
+      rxDiagHighPulseBins[3]++;
+    else if (highVal < 1000)
+      rxDiagHighPulseBins[4]++;
+    else if (highVal < 3000)
+      rxDiagHighPulseBins[5]++;
+    else if (highVal < 5000)
+      rxDiagHighPulseBins[6]++;
+    else
+      rxDiagHighPulseBins[7]++;
+#endif
+
     if (highVal < kDebounce)
       return;
     if (highVal > 300 && highVal < 1000) {
       hiBuf_[pbWrite_] = highVal;
+      if (pbWrite_ == 72) {
+        rxTerminalHighCaptured = true;
+      }
     }
   }
+
+#if JAROLIFT_RX_DIAGNOSTICS
+  if (pbWrite_ > rxDiagMaxPulseCount) {
+    rxDiagMaxPulseCount = pbWrite_;
+  }
+#endif
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -833,6 +1000,8 @@ void JaroliftController::processRxData() {
     memcpy(lowSnapshot, (const void *)lowBuf_, sizeof(lowSnapshot));
     memcpy(hiSnapshot, (const void *)hiBuf_, sizeof(hiSnapshot));
     pbWrite_ = 0;
+    rxTerminalFrameLocked = false;
+    rxTerminalHighCaptured = false;
     memset((void *)lowBuf_, 0, sizeof(lowBuf_));
     memset((void *)hiBuf_, 0, sizeof(hiBuf_));
   }
@@ -944,6 +1113,82 @@ void JaroliftController::begin() {
 void JaroliftController::loop() {
   if (!initOK_)
     return;
+
+#if JAROLIFT_RX_DIAGNOSTICS
+  uint8_t resetReason = 0;
+  unsigned int resetPulseCount = 0;
+  unsigned long resetGapUs = 0;
+  unsigned long resetLowUs = 0;
+  unsigned long resetHighUs = 0;
+
+  noInterrupts();
+  if (rxDiagResetPending) {
+    resetReason = rxDiagResetReason;
+    resetPulseCount = rxDiagResetPulseCount;
+    resetGapUs = rxDiagResetGapUs;
+    resetLowUs = rxDiagResetLowUs;
+    resetHighUs = rxDiagResetHighUs;
+    rxDiagResetPending = false;
+  }
+  interrupts();
+
+  if (resetReason != 0) {
+    ESP_LOGI(TAG,
+             "RX capture reset | reason:%s | count:%u | gap:%lu us | low:%lu us | high:%lu us",
+             resetReason == 1 ? "GAP" : "SYNC",
+             resetPulseCount,
+             resetGapUs,
+             resetLowUs,
+             resetHighUs);
+  }
+
+  unsigned long now = millis();
+  if (now - rxDiagLastLogMs >= 2000) {
+    uint32_t lowBins[8];
+    uint32_t highBins[8];
+
+    noInterrupts();
+    uint32_t edgeCount = rxDiagEdgeCount;
+    unsigned int maxPulseCount = rxDiagMaxPulseCount;
+    unsigned int currentPulseCount = pbWrite_;
+    rxDiagMaxPulseCount = currentPulseCount;
+    for (size_t i = 0; i < 8; i++) {
+      lowBins[i] = rxDiagLowPulseBins[i];
+      highBins[i] = rxDiagHighPulseBins[i];
+      rxDiagLowPulseBins[i] = 0;
+      rxDiagHighPulseBins[i] = 0;
+    }
+    interrupts();
+
+    uint8_t marcState = cc1101_.readStatusReg(CC1101_MARCSTATE) & 0x1F;
+    ESP_LOGI(TAG,
+             "RX diag | MARCSTATE: 0x%02x | edges: %lu (+%lu) | pulses: %u | max pulses: %u",
+             marcState,
+             (unsigned long)edgeCount,
+             (unsigned long)(edgeCount - rxDiagLastEdgeCount),
+             currentPulseCount,
+             maxPulseCount);
+    ESP_LOGI(TAG,
+             "RX LOW A | <200:%lu 200-299:%lu 300-499:%lu 500-699:%lu",
+             (unsigned long)lowBins[0], (unsigned long)lowBins[1],
+             (unsigned long)lowBins[2], (unsigned long)lowBins[3]);
+    ESP_LOGI(TAG,
+             "RX LOW B | 700-999:%lu 1-3ms:%lu 3-5ms:%lu >=5ms:%lu",
+             (unsigned long)lowBins[4], (unsigned long)lowBins[5],
+             (unsigned long)lowBins[6], (unsigned long)lowBins[7]);
+    ESP_LOGI(TAG,
+             "RX HIGH A | <200:%lu 200-299:%lu 300-499:%lu 500-699:%lu",
+             (unsigned long)highBins[0], (unsigned long)highBins[1],
+             (unsigned long)highBins[2], (unsigned long)highBins[3]);
+    ESP_LOGI(TAG,
+             "RX HIGH B | 700-999:%lu 1-3ms:%lu 3-5ms:%lu >=5ms:%lu",
+             (unsigned long)highBins[4], (unsigned long)highBins[5],
+             (unsigned long)highBins[6], (unsigned long)highBins[7]);
+
+    rxDiagLastEdgeCount = edgeCount;
+    rxDiagLastLogMs = now;
+  }
+#endif
 
   if (rxDataReady_) {
     cc1101_.cmdStrobe(CC1101_SCAL);

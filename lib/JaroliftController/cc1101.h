@@ -227,10 +227,10 @@ enum RFSTATE { RFSTATE_IDLE = 0, RFSTATE_RX, RFSTATE_TX };
 // Carrier frequency = 433 MHz
 #define CC1101_DEFVAL_FREQ2_433 0x10 // Frequency Control Word, High Byte
 #define CC1101_DEFVAL_FREQ1_433 0xB0 // Frequency Control Word, Middle Byte
-#define CC1101_DEFVAL_FREQ0_433 0xB0 // Frequency Control Word, Low Byte
+#define CC1101_DEFVAL_FREQ0_433 0x71 // Frequency Control Word, Low Byte
 
-#define CC1101_DEFVAL_MDMCFG4 0x69 // Modem Configuration
-#define CC1101_DEFVAL_MDMCFG3 0xE4 // Modem Configuration
+#define CC1101_DEFVAL_MDMCFG4 0x66 // Modem Configuration
+#define CC1101_DEFVAL_MDMCFG3 0x83 // Modem Configuration
 #define CC1101_DEFVAL_MDMCFG2 0x30 // Modem Configuration
 #define CC1101_DEFVAL_MDMCFG1 0x22 // Modem Configuration
 #define CC1101_DEFVAL_MDMCFG0 0xF8 // Modem Configuration
