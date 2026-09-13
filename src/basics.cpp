@@ -34,6 +34,55 @@ s_espInfo espInfo;
 static muTimer wifiReconnectTimer = muTimer(); // timer for reconnect delay
 static const char *TAG = "SETUP"; // LOG TAG
 
+enum class PreferredNetwork {
+  None,
+  WiFi,
+  Ethernet
+};
+
+static PreferredNetwork preferredNetwork = PreferredNetwork::None;
+
+static const char *preferredNetworkName(PreferredNetwork network) {
+  switch (network) {
+  case PreferredNetwork::WiFi:
+    return "WiFi";
+  case PreferredNetwork::Ethernet:
+    return "Ethernet";
+  default:
+    return "none";
+  }
+}
+
+static void updatePreferredNetworkInterface() {
+  const PreferredNetwork nextNetwork = eth.connected ? PreferredNetwork::Ethernet : wifi.connected ? PreferredNetwork::WiFi : PreferredNetwork::None;
+
+  if (nextNetwork == preferredNetwork) {
+    return;
+  }
+
+  bool defaultInterfaceSet = true;
+  if (nextNetwork == PreferredNetwork::Ethernet) {
+    defaultInterfaceSet = Network.setDefaultInterface(ETH);
+  } else if (nextNetwork == PreferredNetwork::WiFi) {
+    defaultInterfaceSet = Network.setDefaultInterface(WiFi.STA);
+  }
+
+  if (!defaultInterfaceSet) {
+    ESP_LOGE(TAG, "Failed to set preferred network interface: %s", preferredNetworkName(nextNetwork));
+    return;
+  }
+
+  const PreferredNetwork previousNetwork = preferredNetwork;
+  preferredNetwork = nextNetwork;
+
+  if (previousNetwork != PreferredNetwork::None && nextNetwork != PreferredNetwork::None) {
+    ESP_LOGI(TAG, "Network interface changed: %s -> %s", preferredNetworkName(previousNetwork), preferredNetworkName(nextNetwork));
+    mqttReconnectForNetworkChange();
+  } else {
+    ESP_LOGI(TAG, "Network preferred interface: %s", preferredNetworkName(nextNetwork));
+  }
+}
+
 /**
  * *******************************************************************
  * @brief   Setup for NTP Server
@@ -66,7 +115,22 @@ void onWiFiStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
  * *******************************************************************/
 void onWiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   wifi.connected = false;
-  ESP_LOGI(TAG, "WiFi-Disconnected");
+  ESP_LOGW(TAG, "WiFi disconnected | reason: %u | status: %d",
+           static_cast<unsigned int>(info.wifi_sta_disconnected.reason), static_cast<int>(WiFi.status()));
+  updatePreferredNetworkInterface();
+}
+
+/**
+ * *******************************************************************
+ * @brief   callback function if WiFi station lost its IP address
+ * @param   none
+ * @return  none
+ * *******************************************************************/
+void onWiFiLostIP(WiFiEvent_t event, WiFiEventInfo_t info) {
+  wifi.connected = false;
+  wifi.ipAddress[0] = '\0';
+  ESP_LOGW(TAG, "WiFi lost IP | status: %d", static_cast<int>(WiFi.status()));
+  updatePreferredNetworkInterface();
 }
 
 /**
@@ -76,10 +140,14 @@ void onWiFiStationDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
  * @return  none
  * *******************************************************************/
 void onWiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
-  ESP_LOGI(TAG, "WiFi connected");
   snprintf(wifi.ipAddress, sizeof(wifi.ipAddress), "%s", WiFi.localIP().toString().c_str());
-  ESP_LOGI(TAG, "IP address: %s", wifi.ipAddress);
   wifi.connected = true;
+  wifiReconnectTimer.delayReset();
+
+  const float txPowerDbm = static_cast<int>(WiFi.getTxPower()) / 4.0f;
+  ESP_LOGI(TAG, "WiFi connected | IP: %s | RSSI: %ld dBm | TX power: %.1f dBm", wifi.ipAddress,
+           static_cast<long>(WiFi.RSSI()), txPowerDbm);
+  updatePreferredNetworkInterface();
 }
 
 /**
@@ -94,14 +162,17 @@ void checkWiFi() {
     return;
   }
 
-  // Ethernet is also not connected - so we need to establish WiFi
-  if (wifiReconnectTimer.delayOnTrigger((!wifi.connected && !eth.connected), WIFI_RECONNECT)) {
+  const bool stationConnected = WiFi.status() == WL_CONNECTED;
+  if (!stationConnected) {
+    wifi.connected = false;
+  }
+
+  // Keep WiFi connected as fallback even while Ethernet is available
+  if (wifiReconnectTimer.delayOnTrigger(!stationConnected, WIFI_RECONNECT)) {
     wifiReconnectTimer.delayReset();
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(config.wifi.ssid, config.wifi.password);
-    WiFi.hostname(config.wifi.hostname);
-    MDNS.begin(config.wifi.hostname);
-    ESP_LOGI(TAG, "WiFi Mode STA - Trying connect to: %s", config.wifi.ssid);
+    const bool reconnectStarted = WiFi.reconnect();
+    ESP_LOGI(TAG, "WiFi reconnect to: %s | started: %s | status: %d", config.wifi.ssid,
+             reconnectStarted ? "yes" : "no", static_cast<int>(WiFi.status()));
   }
 }
 
@@ -124,6 +195,7 @@ void setupWiFi() {
     WiFi.onEvent(onWiFiStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
     WiFi.onEvent(onWiFiStationDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
     WiFi.onEvent(onWiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
+    WiFi.onEvent(onWiFiLostIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP);
 
     // manual IP-Settings
     if (config.wifi.static_ip) {
@@ -133,6 +205,8 @@ void setupWiFi() {
     // connect to configured wifi AP
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     WiFi.begin(config.wifi.ssid, config.wifi.password);
     WiFi.hostname(config.wifi.hostname);
     MDNS.begin(config.wifi.hostname);
@@ -154,18 +228,22 @@ void onEthEvent(arduino_event_id_t event, arduino_event_info_t info) {
     eth.connected = true;
     snprintf(eth.ipAddress, sizeof(eth.ipAddress), "%s", ETH.localIP().toString().c_str());
     ESP_LOGI(TAG, "ETH Got IP: '%s'", eth.ipAddress);
+    updatePreferredNetworkInterface();
     break;
   case ARDUINO_EVENT_ETH_LOST_IP:
     ESP_LOGI(TAG, "ETH Lost IP");
     eth.connected = false;
+    updatePreferredNetworkInterface();
     break;
   case ARDUINO_EVENT_ETH_DISCONNECTED:
     ESP_LOGI(TAG, "ETH Disconnected");
     eth.connected = false;
+    updatePreferredNetworkInterface();
     break;
   case ARDUINO_EVENT_ETH_STOP:
     ESP_LOGI(TAG, "ETH Stopped");
     eth.connected = false;
+    updatePreferredNetworkInterface();
     break;
   default:
     break;
@@ -179,9 +257,6 @@ void onEthEvent(arduino_event_id_t event, arduino_event_info_t info) {
  * @return  none
  * *******************************************************************/
 void setupETH() {
-
-  pinMode(config.eth.gpio_irq, OUTPUT);
-  pinMode(config.eth.gpio_rst, OUTPUT);
 
   Network.onEvent(onEthEvent);
 
@@ -354,7 +429,7 @@ void sendWiFiInfo() {
   mqttPublish(addTopic("/wifi"), sendWififJSON, false);
 
   // wifi status
-  mqttPublish(addTopic("/status"), "online", false);
+  mqttPublish(addTopic("/status"), "online", true);
 }
 
 /**
@@ -379,7 +454,7 @@ void sendETHInfo() {
   serializeJson(ethJSON, sendEthJSON);
   mqttPublish(addTopic("/eth"), sendEthJSON, false);
 
-  mqttPublish(addTopic("/status"), "online", false);
+  mqttPublish(addTopic("/status"), "online", true);
 }
 
 /**

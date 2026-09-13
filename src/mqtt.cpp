@@ -5,6 +5,8 @@
 #include <message.h>
 #include <mqtt.h>
 #include <mqttDiscovery.h>
+#include <atomic>
+#include <freertos/semphr.h>
 #include <queue>
 
 #define MAX_MQTT_CMD 20
@@ -18,14 +20,17 @@ struct s_MqttMessage {
 };
 
 std::queue<s_MqttMessage> mqttCmdQueue;
-static void processMqttMessage();
+static void processMqttMessage(const s_MqttMessage &msgCpy);
 static AsyncMqttClient mqtt_client;
+static SemaphoreHandle_t mqttCmdQueueMutex = xSemaphoreCreateMutex();
 static bool bootUpMsgDone, setupDone = false;
 static bool callbacksRegistered = false;
 static const char *TAG = "MQTT"; // LOG TAG
 static char lastError[64] = "---";
+static char mqttWillTopic[256];
 static bool mqttConnectAttempted = false;
-static muTimer mqttReconnectTimer;
+static unsigned long lastMqttConnectAttempt = 0;
+static std::atomic<bool> mqttNetworkReconnectRequested{false};
 
 /**
  * *******************************************************************
@@ -34,20 +39,35 @@ static muTimer mqttReconnectTimer;
  * @return  none
  * *******************************************************************/
 void addMqttCmd(const char *topic, const char *payload, int len) {
-  if (mqttCmdQueue.size() < MAX_MQTT_CMD) {
-    s_MqttMessage message;
-    strncpy(message.topic, topic, sizeof(message.topic) - 1);
-    message.topic[sizeof(message.topic) - 1] = '\0';
+  s_MqttMessage message;
+  strncpy(message.topic, topic, sizeof(message.topic) - 1);
+  message.topic[sizeof(message.topic) - 1] = '\0';
 
-    strncpy(message.payload, payload, sizeof(message.payload) - 1);
-    message.payload[sizeof(message.payload) - 1] = '\0';
+  strncpy(message.payload, payload, sizeof(message.payload) - 1);
+  message.payload[sizeof(message.payload) - 1] = '\0';
 
-    message.len = len;
+  message.len = len;
 
-    mqttCmdQueue.push(message);
-    ESP_LOGD(TAG, "add msg to buffer: %s, %s", topic, payload);
+  bool commandQueued = false;
+  bool mqttEnabled = false;
+
+  xSemaphoreTake(mqttCmdQueueMutex, portMAX_DELAY);
+
+  mqttEnabled = config.mqtt.enable;
+
+  if (mqttEnabled && mqttCmdQueue.size() < MAX_MQTT_CMD) {
+      mqttCmdQueue.push(message);
+      commandQueued = true;
+  }
+
+  xSemaphoreGive(mqttCmdQueueMutex);
+
+  if (commandQueued) {
+      ESP_LOGD(TAG, "add msg to buffer: %s, %s", topic, payload);
+  } else if (mqttEnabled) {
+      ESP_LOGE(TAG, "too many commands within too short time");
   } else {
-    ESP_LOGE(TAG, "too many commands within too short time");
+      ESP_LOGD(TAG, "MQTT command ignored while MQTT is disabled");
   }
 }
 
@@ -153,7 +173,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
  * @return  none
  * *******************************************************************/
 void onMqttConnect(bool sessionPresent) {
-  mqttConnectAttempted = false;
+  snprintf(lastError, sizeof(lastError), "---");
   ESP_LOGI(TAG, "MQTT connected");
   // Once connected, publish an announcement...
   sendWiFiInfo();
@@ -200,6 +220,9 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
     snprintf(lastError, sizeof(lastError), "UNKNOWN ERROR");
     break;
   }
+
+  ESP_LOGW(TAG, "MQTT disconnected | reason: %s | WiFi: %s | Ethernet: %s | connected: %s", lastError, wifi.connected ? "yes" : "no",
+           eth.connected ? "yes" : "no", mqtt_client.connected() ? "yes" : "no");
 }
 
 /**
@@ -211,6 +234,12 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
 bool mqttIsConnected() { return mqtt_client.connected(); }
 
 const char *mqttGetLastError() { return lastError; }
+
+void mqttReconnectForNetworkChange() {
+  if (config.mqtt.enable) {
+    mqttNetworkReconnectRequested.store(true);
+  }
+}
 
 /**
  * *******************************************************************
@@ -229,9 +258,9 @@ void mqttSetup() {
   mqtt_client.setServer(config.mqtt.server, config.mqtt.port);
   mqtt_client.setClientId(config.wifi.hostname);
   mqtt_client.setCredentials(config.mqtt.user, config.mqtt.password);
-  mqtt_client.setWill(addTopic("/status"), 0, true, "offline");
+  snprintf(mqttWillTopic, sizeof(mqttWillTopic), "%s/status", config.mqtt.topic);
+  mqtt_client.setWill(mqttWillTopic, 0, true, "offline");
   mqtt_client.setKeepAlive(10);
-  mqtt_client.connected();
 
   ESP_LOGI(TAG, "MQTT setup done!");
 }
@@ -243,22 +272,31 @@ void mqttSetup() {
  * @return  none
  * *******************************************************************/
 void mqttSetEnabled(bool enabled) {
-  if (enabled && config.mqtt.enable) {
-    return;
-  }
-
-  config.mqtt.enable = enabled;
-  if (!enabled) {
-    if (mqtt_client.connected()) {
-      mqtt_client.disconnect();
-    } else {
-      mqtt_client.disconnect(true);
+    if (enabled && config.mqtt.enable) {
+        return;
     }
-  }
 
-  mqttConnectAttempted = false;
-  mqttReconnectTimer.delayReset();
-  setupDone = false;
+    xSemaphoreTake(mqttCmdQueueMutex, portMAX_DELAY);
+
+    config.mqtt.enable = enabled;
+
+    if (!enabled) {
+        while (!mqttCmdQueue.empty()) {
+            mqttCmdQueue.pop();
+        }
+    }
+
+    xSemaphoreGive(mqttCmdQueueMutex);
+
+    if (!enabled) {
+        if (mqtt_client.connected()) {
+            mqtt_client.disconnect();
+        } else {
+            mqtt_client.disconnect(true);
+        }
+    }
+
+    setupDone = false;
 }
 
 /**
@@ -270,27 +308,44 @@ void mqttSetEnabled(bool enabled) {
 void mqttCyclic() {
 
   // process incoming messages
+  s_MqttMessage mqttMessage;
+  bool hasMqttMessage = false;
+  xSemaphoreTake(mqttCmdQueueMutex, portMAX_DELAY);
   if (!mqttCmdQueue.empty()) {
-    processMqttMessage();
+    mqttMessage = mqttCmdQueue.front();
+    mqttCmdQueue.pop();
+    hasMqttMessage = true;
+  }
+  xSemaphoreGive(mqttCmdQueueMutex);
+
+  if (hasMqttMessage) {
+    processMqttMessage(mqttMessage);
+  }
+
+  if (mqttNetworkReconnectRequested.exchange(false)) {
+    mqtt_client.disconnect(true);
+    mqttConnectAttempted = false;
   }
 
   // call setup when connection is established
   if (config.mqtt.enable && !setupMode && !setupDone && (eth.connected || wifi.connected)) {
     mqttSetup();
     setupDone = true;
+    mqttConnectAttempted = false;
   }
 
   // automatic reconnect to mqtt broker if connection is lost
-  if (!mqtt_client.connected() && (wifi.connected || eth.connected)) {
-    if (!mqttConnectAttempted) {
+  if (mqtt_client.connected()) {
+    mqttConnectAttempted = false;
+  } else if (config.mqtt.enable && (wifi.connected || eth.connected)) {
+    const unsigned long now = millis();
+    if (!mqttConnectAttempted || now - lastMqttConnectAttempt >= MQTT_RECONNECT) {
+      const bool retry = mqttConnectAttempted;
       mqttConnectAttempted = true;
-      mqttReconnectTimer.delayReset();
+      lastMqttConnectAttempt = now;
+      ESP_LOGI(TAG, "MQTT connection attempt | retry: %s | WiFi: %s | Ethernet: %s", retry ? "yes" : "no", wifi.connected ? "yes" : "no",
+               eth.connected ? "yes" : "no");
       mqtt_client.connect();
-      ESP_LOGI(TAG, "MQTT - connection attempt");
-    } else if (mqttReconnectTimer.delayOnTrigger(true, MQTT_RECONNECT)) {
-      mqttReconnectTimer.delayReset();
-      mqtt_client.connect();
-      ESP_LOGI(TAG, "MQTT - connection attempt");
     }
   }
 
@@ -403,9 +458,7 @@ uint16_t parseMask(const char *payload) {
  * @param   topic, payload
  * @return  none
  * *******************************************************************/
-void processMqttMessage() {
-
-  s_MqttMessage msgCpy = mqttCmdQueue.front();
+static void processMqttMessage(const s_MqttMessage &msgCpy) {
 
   ESP_LOGD(TAG, "process msg from buffer: %s, %s", msgCpy.topic, msgCpy.payload);
 
@@ -529,5 +582,4 @@ void processMqttMessage() {
     ESP_LOGI(TAG, "unknown topic received");
   }
 
-  mqttCmdQueue.pop(); // next entry in Queue
 }
