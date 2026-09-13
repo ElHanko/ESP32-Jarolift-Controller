@@ -1,4 +1,69 @@
 **Changelog**
+# 2026.3.0
+
+## what's new
+
+### Jarolift remote reception
+
+Reception of original Jarolift remote controls has been improved. Receive
+handling now preserves a completed terminal frame until it can be processed,
+preventing following RF edges from destroying a valid frame before decoding.
+
+The CC1101 receive configuration and Jarolift timing handling have also been
+adjusted based on measurements with the original remote control.
+
+### MQTT command events
+
+Actually executed shutter commands are now published as non-retained MQTT
+events per physical shutter.
+
+Events contain the executed command, its source and a runtime sequence number.
+The source distinguishes commands executed by the controller from commands
+received from a registered original remote control.
+
+Group commands generate an event for every affected shutter.
+
+See `Doc/jarolift-iobroker-command-event-contract.md` for the event contract.
+
+### Network and MQTT reliability
+
+Wi-Fi recovery now follows the real station connection state and also handles
+loss of the assigned IP address.
+
+Wi-Fi performs a full-channel scan and prefers the strongest matching access
+point instead of stopping at the first matching SSID. If the signal remains
+below -75 dBm continuously for 10 minutes, the controller reconnects so that a
+better access point can be selected.
+
+When both network interfaces are available, Ethernet is preferred and Wi-Fi is
+kept connected as a fallback. MQTT reconnects when the preferred network
+interface changes.
+
+MQTT reconnect handling, command queue synchronization and online/offline state
+publication have also been hardened.
+
+### Logging reliability
+
+The WebUI log ring buffer is now protected against concurrent access. Log
+entries are copied under a mutex before they are processed by the WebUI,
+preventing mixed or corrupted log lines.
+
+## changelog
+
+* [FEATURE] publish executed Jarolift shutter commands as non-retained MQTT events
+* [FEATURE] include command source and runtime sequence in MQTT command events
+* [FIX] improve reception and terminal-frame handling for original Jarolift remotes
+* [FIX] make the MQTT command queue thread-safe
+* [FIX] use a stable MQTT Last Will topic and retained online/offline state
+* [FIX] make MQTT reconnect handling deterministic and reconnect after network-interface changes
+* [IMPROVE] prefer Ethernet when available while keeping Wi-Fi connected as fallback
+* [IMPROVE] use full-channel Wi-Fi scans and select the strongest matching access point
+* [IMPROVE] reconnect Wi-Fi after 10 minutes continuously below -75 dBm
+* [FIX] make the WebUI log ring buffer thread-safe
+* [CI] remove the unused GitHub Pages deployment workflow
+
+---
+
 # 2026.2.2
 
 ## what's new

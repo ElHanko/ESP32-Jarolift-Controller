@@ -30,7 +30,7 @@
 > focusing on a reproducible build, a reduced attack surface and the hardware
 > configuration actually used and tested by this fork.
 
-Current version: **2026.2.2**
+Current version: **2026.3.0**
 
 Version scheme:
 
