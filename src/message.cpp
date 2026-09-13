@@ -1,5 +1,6 @@
 #include <basics.h>
 #include <message.h>
+#include <freertos/semphr.h>
 
 /* D E C L A R A T I O N S ****************************************************/
 #define MSG_BUF_SIZE 1024 // buffer size for messaging
@@ -13,7 +14,8 @@ static uint32_t totalHeap = 0;
 static uint32_t heapSamples[HEAP_SAMPLE_COUNT];
 static int sampleIndex = 0;
 static const char *TAG = "MSG"; // LOG TAG
-s_logdata logData;
+static s_logdata logData;
+static SemaphoreHandle_t logDataMutex = xSemaphoreCreateMutex();
 esp_log_level_t logLevel = ESP_LOG_INFO;
 
 static muTimer checkHeapTimer = muTimer();
@@ -161,10 +163,12 @@ int custom_vprintf(const char *format, va_list args) {
  * @return  none
  * *******************************************************************/
 void clearLogBuffer() {
+  xSemaphoreTake(logDataMutex, portMAX_DELAY);
   logData.lastLine = 0;
   for (int i = 0; i < MAX_LOG_LINES; i++) {
     memset(logData.buffer[i], 0, sizeof(logData.buffer[i]));
   }
+  xSemaphoreGive(logDataMutex);
 }
 
 /**
@@ -175,9 +179,59 @@ void clearLogBuffer() {
  * *******************************************************************/
 void addLogBuffer(const char *message) {
   if (strlen(message) != 0) {
-    snprintf(logData.buffer[logData.lastLine], sizeof(logData.buffer[logData.lastLine]), "[%s]  %s", EspStrUtil::getDateTimeString(), message);
+    char logEntry[MAX_LOG_ENTRY] = {'\0'};
+    snprintf(logEntry, sizeof(logEntry), "[%s]  %s", EspStrUtil::getDateTimeString(), message);
+
+    xSemaphoreTake(logDataMutex, portMAX_DELAY);
+    memcpy(logData.buffer[logData.lastLine], logEntry, sizeof(logEntry));
     logData.lastLine = (logData.lastLine + 1) % MAX_LOG_LINES; // update the lastLine index in a circular manner
+    xSemaphoreGive(logDataMutex);
   }
+}
+
+/**
+ * *******************************************************************
+ * @brief   copy one entry from LogBuffer
+ * @param   line, newestFirst, entry, entrySize, bufferEmpty
+ * @return  true if an entry was copied
+ * *******************************************************************/
+bool copyLogBufferEntry(int line, bool newestFirst, char *entry, size_t entrySize, bool *bufferEmpty) {
+  if (line < 0 || line >= MAX_LOG_LINES || entry == nullptr || entrySize == 0 || bufferEmpty == nullptr) {
+    return false;
+  }
+
+  bool entryCopied = false;
+  entry[0] = '\0';
+
+  xSemaphoreTake(logDataMutex, portMAX_DELAY);
+
+  *bufferEmpty = (line == 0 &&
+                  logData.lastLine == 0 &&
+                  logData.buffer[0][0] == '\0');
+  if (!*bufferEmpty) {
+    int entryIndex;
+
+    if (newestFirst) {
+      entryIndex = (logData.lastLine - line - 1) % MAX_LOG_LINES;
+    } else if (logData.buffer[logData.lastLine][0] == '\0') {
+      entryIndex = line % MAX_LOG_LINES;
+    } else {
+      entryIndex = (logData.lastLine + line) % MAX_LOG_LINES;
+    }
+
+    if (entryIndex < 0) {
+      entryIndex += MAX_LOG_LINES;
+    }
+
+    if (logData.buffer[entryIndex][0] != '\0') {
+      strncpy(entry, logData.buffer[entryIndex], entrySize - 1);
+      entry[entrySize - 1] = '\0';
+      entryCopied = true;
+    }
+  }
+
+  xSemaphoreGive(logDataMutex);
+  return entryCopied;
 }
 
 /**

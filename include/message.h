@@ -11,11 +11,10 @@ struct s_logdata {
   char buffer[MAX_LOG_LINES][MAX_LOG_ENTRY];
 };
 
-extern s_logdata logData;
-
 /* P R O T O T Y P E S ********************************************************/
 void messageSetup();
 void messageCyclic();
 void addLogBuffer(const char *message);
+bool copyLogBufferEntry(int line, bool newestFirst, char *entry, size_t entrySize, bool *bufferEmpty);
 void clearLogBuffer();
 void setLogLevel(uint8_t level);
