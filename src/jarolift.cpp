@@ -20,6 +20,49 @@ std::queue<JaroCommand> jaroCmdQueue;
 
 JaroliftController jarolift;
 
+static uint32_t commandEventSequence = 0;
+
+/**
+ * *******************************************************************
+ * @brief   publish an actually executed shutter command via mqtt
+ * @param   channel, command, source
+ * @return  none
+ * *******************************************************************/
+static void mqttSendCommandEvent(uint8_t channel, const char *command, const char *source) {
+
+  if (!mqttIsConnected() || channel >= 16 || command == nullptr || source == nullptr) {
+    return;
+  }
+
+  char topic[96];
+  char payload[128];
+
+  commandEventSequence++;
+
+  snprintf(topic, sizeof(topic), "%s%u", addTopic("/status/command/shutter/"), channel + 1);
+  snprintf(payload, sizeof(payload),
+           "{\"cmd\":\"%s\",\"source\":\"%s\",\"seq\":%lu}",
+           command, source, (unsigned long)commandEventSequence);
+
+  // Command events are transient events and must never be retained.
+  mqttPublish(topic, payload, false);
+}
+
+/**
+ * *******************************************************************
+ * @brief   publish one command event for every shutter in a group mask
+ * @param   group_mask, command, source
+ * @return  none
+ * *******************************************************************/
+static void mqttSendCommandEventGroup(uint16_t group_mask, const char *command, const char *source) {
+
+  for (uint8_t channel = 0; channel < 16; channel++) {
+    if (group_mask & (1U << channel)) {
+      mqttSendCommandEvent(channel, command, source);
+    }
+  }
+}
+
 /**
  * *******************************************************************
  * @brief   send expected position via mqtt
@@ -109,6 +152,10 @@ void mqttSendRemote(uint32_t serial, int8_t function, uint16_t channel) {
       // check if this remote is registered for one or more shutter
       for (int j = 0; j < 16; j++) {
         if (config.jaro.remote_mask[i] & (1 << j)) {
+          if (function == 0x2 || function == 0x3 || function == 0x4 || function == 0x8) {
+            mqttSendCommandEvent(j, fun, "remote");
+          }
+
           switch (function) {
           case 0x2:
             mqttSendPosition(j, POS_CLOSE);
@@ -233,25 +280,30 @@ void processJaroCommands() {
       switch (cmd.single.type) {
       case CMD_UP:
         jarolift.cmdChannel(JaroliftController::CMD_UP, cmd.single.channel);
+        mqttSendCommandEvent(cmd.single.channel, "UP", "controller");
         mqttSendPosition(cmd.single.channel, POS_OPEN);
         ESP_LOGI(TAG, "execute cmd: UP - channel: %i", cmd.single.channel + 1);
         break;
       case CMD_DOWN:
         jarolift.cmdChannel(JaroliftController::CMD_DOWN, cmd.single.channel);
+        mqttSendCommandEvent(cmd.single.channel, "DOWN", "controller");
         mqttSendPosition(cmd.single.channel, POS_CLOSE);
         ESP_LOGI(TAG, "execute cmd: DOWN - channel: %i", cmd.single.channel + 1);
         break;
       case CMD_STOP:
         jarolift.cmdChannel(JaroliftController::CMD_STOP, cmd.single.channel);
+        mqttSendCommandEvent(cmd.single.channel, "STOP", "controller");
         ESP_LOGI(TAG, "execute cmd: STOP - channel: %i", cmd.single.channel + 1);
         break;
       case CMD_SET_SHADE:
         jarolift.cmdChannel(JaroliftController::CMD_SET_SHADE, cmd.single.channel);
+        mqttSendCommandEvent(cmd.single.channel, "SETSHADE", "controller");
         mqttSendPosition(cmd.single.channel, POS_SHADE);
         ESP_LOGI(TAG, "execute cmd: SETSHADE - channel: %i", cmd.single.channel + 1);
         break;
       case CMD_SHADE:
         jarolift.cmdChannel(JaroliftController::CMD_SHADE, cmd.single.channel);
+        mqttSendCommandEvent(cmd.single.channel, "SHADE", "controller");
         ESP_LOGI(TAG, "execute cmd: SHADE - channel: %i", cmd.single.channel + 1);
         break;
       }
@@ -259,20 +311,24 @@ void processJaroCommands() {
       switch (cmd.group.type) {
       case CMD_GRP_UP:
         jarolift.cmdGroup(JaroliftController::CMD_UP, cmd.group.group_mask);
+        mqttSendCommandEventGroup(cmd.group.group_mask, "UP", "controller");
         ESP_LOGI(TAG, "execute group cmd: UP - mask: %04X", cmd.group.group_mask);
         mqttSendPositionGroup(cmd.group.group_mask, POS_OPEN);
         break;
       case CMD_GRP_DOWN:
         jarolift.cmdGroup(JaroliftController::CMD_DOWN, cmd.group.group_mask);
+        mqttSendCommandEventGroup(cmd.group.group_mask, "DOWN", "controller");
         ESP_LOGI(TAG, "execute group cmd: DOWN - mask: %04X", cmd.group.group_mask);
         mqttSendPositionGroup(cmd.group.group_mask, POS_CLOSE);
         break;
       case CMD_GRP_STOP:
         jarolift.cmdGroup(JaroliftController::CMD_STOP, cmd.group.group_mask);
+        mqttSendCommandEventGroup(cmd.group.group_mask, "STOP", "controller");
         ESP_LOGI(TAG, "execute group cmd: STOP - mask: %04X", cmd.group.group_mask);
         break;
       case CMD_GRP_SHADE:
         jarolift.cmdGroup(JaroliftController::CMD_SHADE, cmd.group.group_mask);
+        mqttSendCommandEventGroup(cmd.group.group_mask, "SHADE", "controller");
         mqttSendPositionGroup(cmd.group.group_mask, POS_SHADE);
         ESP_LOGI(TAG, "execute group cmd: SHADE - mask: %04X", cmd.group.group_mask);
         break;
