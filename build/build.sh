@@ -39,6 +39,21 @@ else
   echo "Build mode: release (using public default secrets)"
 fi
 
+RELEASE_SECRET_PLACEHOLDER_CREATED=false
+
+cleanup() {
+  if [[ "$RELEASE_SECRET_PLACEHOLDER_CREATED" == true ]]; then
+    rm -f "$ROOT/include/local_secrets.h"
+  fi
+}
+
+trap cleanup EXIT
+
+if [[ "$MODE" == "release" && ! -e "$ROOT/include/local_secrets.h" ]]; then
+  : > "$ROOT/include/local_secrets.h"
+  RELEASE_SECRET_PLACEHOLDER_CREATED=true
+fi
+
 mkdir -p "$OUT"
 rm -f "$OUT"/*.bin "$OUT"/SHA256SUMS
 rm -rf "$OUT/web"
