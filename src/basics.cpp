@@ -32,6 +32,9 @@ SPIClass *SPI_2;
 s_espInfo espInfo;
 
 static muTimer wifiReconnectTimer = muTimer(); // timer for reconnect delay
+static constexpr int WIFI_ROAM_RSSI_THRESHOLD = -75;
+static constexpr unsigned long WIFI_ROAM_DELAY = 600000UL; // 10 minutes
+static unsigned long wifiPoorSignalSince = 0;
 static const char *TAG = "SETUP"; // LOG TAG
 
 enum class PreferredNetwork {
@@ -163,8 +166,29 @@ void checkWiFi() {
   }
 
   const bool stationConnected = WiFi.status() == WL_CONNECTED;
+
   if (!stationConnected) {
     wifi.connected = false;
+    wifiPoorSignalSince = 0;
+  } else {
+    const int rssi = WiFi.RSSI();
+
+    if (rssi < WIFI_ROAM_RSSI_THRESHOLD) {
+      const unsigned long now = millis();
+
+      if (wifiPoorSignalSince == 0) {
+        wifiPoorSignalSince = now;
+      } else if (now - wifiPoorSignalSince >= WIFI_ROAM_DELAY) {
+        ESP_LOGW(TAG, "WiFi signal poor for 600 seconds | RSSI: %d dBm | reconnecting", rssi);
+        wifiPoorSignalSince = 0;
+
+        const bool reconnectStarted = WiFi.reconnect();
+        ESP_LOGI(TAG, "WiFi roaming reconnect to: %s | started: %s", config.wifi.ssid,
+                 reconnectStarted ? "yes" : "no");
+      }
+    } else {
+      wifiPoorSignalSince = 0;
+    }
   }
 
   // Keep WiFi connected as fallback even while Ethernet is available
